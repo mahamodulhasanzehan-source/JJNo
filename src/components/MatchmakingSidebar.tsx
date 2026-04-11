@@ -22,10 +22,29 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart }: 
   
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const roomRef = useRef<string>('');
+  const onMatchStartRef = useRef(onMatchStart);
+  const selectedCharacterRef = useRef(selectedCharacter);
+  const inQueueRef = useRef(inQueue);
 
   useEffect(() => {
-    const s = io();
+    onMatchStartRef.current = onMatchStart;
+    selectedCharacterRef.current = selectedCharacter;
+    inQueueRef.current = inQueue;
+  }, [onMatchStart, selectedCharacter, inQueue]);
+
+  useEffect(() => {
+    const s = io({ transports: ['websocket'] });
     setSocket(s);
+
+    s.on('connect', () => {
+      // If we were in the queue and reconnected, rejoin the queue
+      if (inQueueRef.current && selectedCharacterRef.current) {
+        s.emit('join_q2play', { 
+          name: `Player_${Math.floor(Math.random()*1000)}`, 
+          character: selectedCharacterRef.current 
+        });
+      }
+    });
 
     s.on('lobby_update', (entries: LobbyEntry[]) => {
       setLobby(entries);
@@ -54,14 +73,14 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart }: 
 
       if (role === 'host') {
         const dc = pc.createDataChannel('game_sync', { negotiated: true, id: 0 });
-        dc.onopen = () => onMatchStart('host', dc, pc);
+        dc.onopen = () => onMatchStartRef.current('host', dc, pc);
         
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
         s.emit('webrtc_offer', { room, offer });
       } else {
         const dc = pc.createDataChannel('game_sync', { negotiated: true, id: 0 });
-        dc.onopen = () => onMatchStart('client', dc, pc);
+        dc.onopen = () => onMatchStartRef.current('client', dc, pc);
       }
     });
 
@@ -87,7 +106,7 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart }: 
     });
 
     return () => { s.disconnect(); };
-  }, [onMatchStart]);
+  }, []);
 
   const handleQ2Play = () => {
     if (!selectedCharacter) {
