@@ -643,6 +643,37 @@ export class GameEngine {
     this.ctx.shadowBlur = 0;
     
     this.abonant.draw(this.ctx, this.camera);
+
+    // Draw Tracking Diamonds
+    this.ctx.save();
+    
+    // Player Diamond (Blue)
+    this.ctx.fillStyle = '#00aaff';
+    this.ctx.shadowColor = '#00aaff';
+    this.ctx.shadowBlur = 10;
+    this.ctx.beginPath();
+    const px = this.player.pos.x + this.player.width / 2 - this.camera.x;
+    const py = this.player.pos.y - 30 - this.camera.y + Math.sin(performance.now() / 200) * 5;
+    this.ctx.moveTo(px, py - 10);
+    this.ctx.lineTo(px + 10, py);
+    this.ctx.lineTo(px, py + 10);
+    this.ctx.lineTo(px - 10, py);
+    this.ctx.fill();
+
+    // Abonant Diamond (Red)
+    this.ctx.fillStyle = '#ff0044';
+    this.ctx.shadowColor = '#ff0044';
+    this.ctx.shadowBlur = 10;
+    this.ctx.beginPath();
+    const ax = this.abonant.pos.x + this.abonant.width / 2 - this.camera.x;
+    const ay = this.abonant.pos.y - 30 - this.camera.y + Math.sin(performance.now() / 200 + Math.PI) * 5;
+    this.ctx.moveTo(ax, ay - 10);
+    this.ctx.lineTo(ax + 10, ay);
+    this.ctx.lineTo(ax, ay + 10);
+    this.ctx.lineTo(ax - 10, ay);
+    this.ctx.fill();
+
+    this.ctx.restore();
     
     for (const p of this.projectiles) p.draw(this.ctx, this.camera);
     for (const p of this.particles) p.draw(this.ctx, this.camera);

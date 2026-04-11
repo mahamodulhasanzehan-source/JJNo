@@ -19,12 +19,12 @@ export function HUD({ gameState }: HUDProps) {
       <div className="w-1/3">
         <div className="flex justify-between text-white font-bold mb-1">
           <span>YOU</span>
-          <span>{Math.max(0, Math.floor(gameState.playerHp))} / 125 HP</span>
+          <span>{Math.max(0, Math.floor(gameState.playerHp))} / 200 HP</span>
         </div>
         <div className="h-6 bg-red-950/50 border-2 border-red-900 rounded-sm overflow-hidden mb-2">
           <div 
             className="h-full bg-red-500 transition-all duration-200 ease-out"
-            style={{ width: `${(Math.max(0, gameState.playerHp) / 125) * 100}%` }}
+            style={{ width: `${(Math.max(0, gameState.playerHp) / 200) * 100}%` }}
           />
         </div>
         <div className="flex gap-2">
@@ -69,12 +69,12 @@ export function HUD({ gameState }: HUDProps) {
       <div className="w-1/3 text-right">
         <div className="flex justify-between text-white font-bold mb-1 flex-row-reverse">
           <span>ABONANT</span>
-          <span>{Math.max(0, Math.floor(gameState.enemyHp))} / 125 HP</span>
+          <span>{Math.max(0, Math.floor(gameState.enemyHp))} / 200 HP</span>
         </div>
         <div className="h-6 bg-red-950/50 border-2 border-red-900 rounded-sm overflow-hidden mb-2">
           <div 
             className="h-full bg-red-600 transition-all duration-200 ease-out float-right"
-            style={{ width: `${(Math.max(0, gameState.enemyHp) / 125) * 100}%` }}
+            style={{ width: `${(Math.max(0, gameState.enemyHp) / 200) * 100}%` }}
           />
         </div>
         <div className="flex gap-2 flex-row-reverse">
@@ -118,8 +118,8 @@ export function EndGameScreen({ winner, onRestart }: EndGameScreenProps) {
             return (
               <motion.span
                 key={i}
-                initial={{ opacity: 0, x: Math.cos(angle) * dist, y: Math.sin(angle) * dist, rotate: (Math.random() - 0.5) * 180 }}
-                animate={{ opacity: 1, x: 0, y: 0, rotate: 0 }}
+                initial={{ opacity: 0, x: Math.cos(angle) * dist, y: Math.sin(angle) * dist, rotate: (Math.random() - 0.5) * 180, scale: 0, clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)' }}
+                animate={{ opacity: 1, x: 0, y: 0, rotate: 0, scale: 1, clipPath: 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)' }}
                 transition={{ duration: 0.8, type: 'spring', bounce: 0.4, delay: i * 0.1 }}
                 className="inline-block"
               >
@@ -128,17 +128,21 @@ export function EndGameScreen({ winner, onRestart }: EndGameScreenProps) {
             );
           })
         ) : (
-          'YOU WERE CONSUMED'.split('').map((char, i) => (
-            <motion.span
-              key={i}
-              initial={{ opacity: 0, filter: 'blur(15px) brightness(200%)', y: -50, color: '#fbbf24', scale: 1.5 }}
-              animate={{ opacity: 1, filter: 'blur(0px) brightness(100%)', y: 0, color: '#dc2626', scale: 1 }}
-              transition={{ duration: 1.2, delay: i * 0.05, ease: "easeOut" }}
-              className="inline-block"
-            >
-              {char === ' ' ? '\u00A0' : char}
-            </motion.span>
-          ))
+          'YOU WERE CONSUMED'.split('').map((char, i) => {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 500 + Math.random() * 500;
+            return (
+              <motion.span
+                key={i}
+                initial={{ opacity: 0, x: Math.cos(angle) * dist, y: Math.sin(angle) * dist, rotate: (Math.random() - 0.5) * 180, scale: 0, filter: 'blur(15px) brightness(200%)', color: '#fbbf24', clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)' }}
+                animate={{ opacity: 1, x: 0, y: 0, rotate: 0, scale: 1, filter: 'blur(0px) brightness(100%)', color: '#dc2626', clipPath: 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)' }}
+                transition={{ duration: 1.2, delay: i * 0.05, ease: "easeOut" }}
+                className="inline-block"
+              >
+                {char === ' ' ? '\u00A0' : char}
+              </motion.span>
+            );
+          })
         )}
       </h1>
       <motion.button 
