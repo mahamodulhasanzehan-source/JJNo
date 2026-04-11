@@ -313,8 +313,8 @@ export class GameEngine {
         this.activeHollowPurples.push({
           pos: { ...vec.start },
           vel: { x: (dx / dist) * speed, y: (dy / dist) * speed },
-          radius: 80,
-          targetRadius: 80,
+          radius: 160,
+          targetRadius: 160,
           damageTimer: 0,
           ownerId: currentDomainOwner!,
           formingTimer: 0
@@ -327,8 +327,8 @@ export class GameEngine {
         this.activeHollowPurples.push({
           pos: { x: owner.pos.x + owner.width/2, y: owner.pos.y + owner.height/2 },
           vel: { x: (dx / dist) * speed, y: (dy / dist) * speed },
-          radius: 10,
-          targetRadius: 80,
+          radius: 20,
+          targetRadius: 160,
           damageTimer: 0,
           ownerId: currentDomainOwner!,
           formingTimer: 2000
@@ -354,14 +354,14 @@ export class GameEngine {
         const dist = Math.hypot(dx, dy);
         
         if (dist < hp.radius * 4) {
-          const force = 800 / Math.max(dist / 50, 1);
+          const force = 2400 / Math.max(dist / 50, 1);
           target.vel.x += (dx / dist) * force * (dt / 1000);
           target.vel.y += (dy / dist) * force * (dt / 1000);
           
           if (dist < hp.radius) {
             hp.damageTimer -= dt;
             if (hp.damageTimer <= 0) {
-              if (target.takeDamage(25, false, 'Gojo', hp.ownerId)) {
+              if (target.takeDamage(75, false, 'Gojo', hp.ownerId)) {
                 this.triggerHitSpark(target.pos.x + target.width/2, target.pos.y + target.height/2, '#8a2be2');
                 this.triggerShake(15);
               }
@@ -632,7 +632,7 @@ export class GameEngine {
       if (this.domainManager.timer <= 2000 && this.domainManager.purpleVectors.length > 0) {
         const vec = this.domainManager.purpleVectors[0];
         const progress = 1 - (this.domainManager.timer / 2000);
-        const radius = 10 + 70 * progress;
+        const radius = 20 + 140 * progress;
         
         this.ctx.save();
         this.ctx.shadowBlur = 30;

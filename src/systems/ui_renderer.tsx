@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'motion/react';
 import { CharacterType } from '../game/Types';
 import { STAMINA_MAX, ENERGY_MAX } from '../game/Constants';
 
@@ -109,15 +110,46 @@ export function EndGameScreen({ winner, onRestart }: EndGameScreenProps) {
   
   return (
     <div className={`absolute inset-0 z-50 flex flex-col items-center justify-center ${winner === 'player' ? 'bg-white/10' : 'bg-black/50'}`}>
-      <h1 className={`text-8xl font-black tracking-tighter mb-8 ${winner === 'player' ? 'text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.8)]' : 'text-red-600 drop-shadow-[0_0_20px_rgba(255,0,0,0.8)]'}`}>
-        {winner === 'player' ? 'PURIFIED' : 'YOU WERE CONSUMED'}
+      <h1 className={`flex gap-1 text-8xl font-black tracking-tighter mb-8 ${winner === 'player' ? 'text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.8)]' : 'text-red-600 drop-shadow-[0_0_20px_rgba(255,0,0,0.8)]'}`}>
+        {winner === 'player' ? (
+          'PURIFIED'.split('').map((char, i) => {
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 500 + Math.random() * 500;
+            return (
+              <motion.span
+                key={i}
+                initial={{ opacity: 0, x: Math.cos(angle) * dist, y: Math.sin(angle) * dist, rotate: (Math.random() - 0.5) * 180 }}
+                animate={{ opacity: 1, x: 0, y: 0, rotate: 0 }}
+                transition={{ duration: 0.8, type: 'spring', bounce: 0.4, delay: i * 0.1 }}
+                className="inline-block"
+              >
+                {char}
+              </motion.span>
+            );
+          })
+        ) : (
+          'YOU WERE CONSUMED'.split('').map((char, i) => (
+            <motion.span
+              key={i}
+              initial={{ opacity: 0, filter: 'blur(15px) brightness(200%)', y: -50, color: '#fbbf24', scale: 1.5 }}
+              animate={{ opacity: 1, filter: 'blur(0px) brightness(100%)', y: 0, color: '#dc2626', scale: 1 }}
+              transition={{ duration: 1.2, delay: i * 0.05, ease: "easeOut" }}
+              className="inline-block"
+            >
+              {char === ' ' ? '\u00A0' : char}
+            </motion.span>
+          ))
+        )}
       </h1>
-      <button 
+      <motion.button 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 1.5, duration: 0.5 }}
         onClick={onRestart}
         className="px-8 py-4 bg-white text-black font-bold text-xl hover:bg-gray-200 transition-colors"
       >
         REINCARNATE
-      </button>
+      </motion.button>
     </div>
   );
 }
