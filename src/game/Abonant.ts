@@ -46,14 +46,20 @@ export class Abonant extends Entity {
 
     this.facingRight = dist > 0;
 
-    // Jump over incoming projectiles
+    // Jump or dash over incoming projectiles
     for (const p of projectiles) {
       if (p.ownerId !== this.id && p.active) {
         const pDist = p.pos.x - this.pos.x;
         // If projectile is approaching and close
-        if (Math.abs(pDist) < 150 && Math.sign(pDist) !== Math.sign(p.vel.x) && this.isGrounded) {
-          this.vel.y = -12;
-          this.isGrounded = false;
+        if (Math.abs(pDist) < 200 && Math.sign(pDist) !== Math.sign(p.vel.x)) {
+          if (this.isGrounded && Math.random() > 0.3) {
+            this.vel.y = -12;
+            this.isGrounded = false;
+          } else if (this.energy >= Q_COST && this.cooldowns.q <= 0 && Math.random() > 0.5) {
+            // Dodge by dashing through it
+            this.state = 'ATTACK_Q';
+            return;
+          }
           break;
         }
       }
@@ -64,31 +70,46 @@ export class Abonant extends Entity {
       return;
     }
 
-    // Domain Counter / Attempt Domain if player is low on health
+    // Domain Usage: Be much more proactive if we have the energy
     const domainCost = this.characterType === 'Gojo' ? 75 : 70;
-    if (this.energy >= domainCost && this.target.hp < 50) {
-       this.state = 'DOMAIN';
-       return;
+    if (this.energy >= domainCost) {
+       if (Math.random() > 0.05) { // 95% chance to use domain when available
+           this.state = 'DOMAIN';
+           return;
+       }
     }
 
-    if (this.target.energy >= 50 && Math.random() > 0.8) {
+    if (this.target.energy >= 50 && Math.random() > 0.7) {
        this.state = 'DESPERATION';
        return;
     }
 
-    if (absDist > 400) {
+    // Movement and Attack Logic
+    if (absDist > 500) {
       this.state = 'APPROACH';
-    } else if (absDist > 200 && absDist <= 400) {
-      // Baiting: stay just outside E range
-      if (Math.random() > 0.5) {
-        this.state = 'BAIT';
-      } else if (this.energy >= E_COST && this.cooldowns.e <= 0) {
+    } else if (absDist > 250 && absDist <= 500) {
+      // Mid-range
+      if (this.energy >= E_COST && this.cooldowns.e <= 0 && Math.random() > 0.4) {
         this.state = 'ATTACK_E';
+      } else if (Math.random() > 0.6) {
+        this.state = 'BAIT';
       } else {
         this.state = 'APPROACH';
       }
+    } else if (absDist > 100 && absDist <= 250) {
+      // Close-mid range
+      if (this.energy >= Q_COST && this.cooldowns.q <= 0 && Math.random() > 0.2) {
+        this.state = 'ATTACK_Q';
+      } else if (this.energy >= E_COST && this.cooldowns.e <= 0 && Math.random() > 0.5) {
+        this.state = 'ATTACK_E';
+      } else if (this.hp < 50 && Math.random() > 0.3) {
+        this.state = 'RETREAT';
+      } else {
+        this.state = Math.random() > 0.5 ? 'BAIT' : 'APPROACH';
+      }
     } else {
-      if (this.energy >= Q_COST && this.cooldowns.q <= 0 && Math.random() > 0.3) {
+      // Melee range
+      if (this.energy >= Q_COST && this.cooldowns.q <= 0) {
         this.state = 'ATTACK_Q';
       } else {
         this.state = 'RETREAT';
@@ -130,7 +151,10 @@ export class Abonant extends Entity {
         break;
       case 'BAIT':
         // Move erratically just outside range
-        this.vel.x = (Math.random() > 0.5 ? speed : -speed) * 0.5;
+        this.vel.x = (Math.random() > 0.5 ? speed * 1.2 : -speed * 1.2);
+        if (Math.random() > 0.95 && this.isGrounded) {
+           this.vel.y = -10; // Occasional short hop
+        }
         break;
       case 'DESPERATION':
         // Maximize damage, spam Q and E
