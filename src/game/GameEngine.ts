@@ -59,6 +59,16 @@ export class GameEngine {
     damageTimer: number;
     ownerId: string;
     formingTimer: number;
+    hasDamaged: boolean;
+  }[] = [];
+
+  visualSlashes: {
+    x: number;
+    y: number;
+    angle: number;
+    timer: number;
+    maxTimer: number;
+    color: string;
   }[] = [];
 
   constructor(canvas: HTMLCanvasElement) {
@@ -144,7 +154,7 @@ export class GameEngine {
       if (abilityType === 'E') {
         applyYujiE(target, sourceEntity);
       } else if (abilityType === 'Q') {
-        applyYujiQ(target);
+        applyYujiQ(target, sourceEntity);
       }
     } else if (sourceCharacter === 'Gojo') {
       if (abilityType === 'E') {
@@ -317,7 +327,8 @@ export class GameEngine {
           targetRadius: 160,
           damageTimer: 0,
           ownerId: currentDomainOwner!,
-          formingTimer: 0
+          formingTimer: 0,
+          hasDamaged: false
         });
       } else {
         const dx = target.pos.x - owner.pos.x;
@@ -331,7 +342,8 @@ export class GameEngine {
           targetRadius: 160,
           damageTimer: 0,
           ownerId: currentDomainOwner!,
-          formingTimer: 2000
+          formingTimer: 2000,
+          hasDamaged: false
         });
       }
       this.domainManager.purpleVectors = [];
@@ -359,13 +371,12 @@ export class GameEngine {
           target.vel.y += (dy / dist) * force * (dt / 1000);
           
           if (dist < hp.radius) {
-            hp.damageTimer -= dt;
-            if (hp.damageTimer <= 0) {
+            if (!hp.hasDamaged) {
               if (target.takeDamage(75, false, 'Gojo', hp.ownerId)) {
                 this.triggerHitSpark(target.pos.x + target.width/2, target.pos.y + target.height/2, '#8a2be2');
                 this.triggerShake(15);
               }
-              hp.damageTimer = 750;
+              hp.hasDamaged = true;
             }
           }
         }
@@ -404,8 +415,17 @@ export class GameEngine {
     }
 
     if (!(isDomainActive && currentDomainType === 'Gojo')) {
-      this.player.update(dt, this.groundY, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Yuji');
-      this.abonant.update(dt, this.groundY, this.player, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Sukuna', isDomainActive && currentDomainType === 'Yuji');
+      const playerStats = this.player.update(dt, this.groundY, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Yuji');
+      const abonantStats = this.abonant.update(dt, this.groundY, this.player, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Sukuna', isDomainActive && currentDomainType === 'Yuji');
+
+      if (playerStats?.didSecondaryHit || playerStats?.didBleedHit) {
+        this.spawnVisualSlash(this.player.pos.x + this.player.width/2, this.player.pos.y + this.player.height/2, '#ff0000');
+        this.triggerShake(5);
+      }
+      if (abonantStats?.didSecondaryHit || abonantStats?.didBleedHit) {
+        this.spawnVisualSlash(this.abonant.pos.x + this.abonant.width/2, this.abonant.pos.y + this.abonant.height/2, '#ff0000');
+        this.triggerShake(5);
+      }
     }
 
     // Update Beams (Removed as per instructions)
@@ -525,6 +545,17 @@ export class GameEngine {
         this.slowMoTimer = 2000;
       }
     }
+  }
+
+  spawnVisualSlash(x: number, y: number, color: string) {
+    this.visualSlashes.push({
+      x: x + (Math.random() - 0.5) * 40,
+      y: y + (Math.random() - 0.5) * 40,
+      angle: Math.random() * Math.PI * 2,
+      timer: 200,
+      maxTimer: 200,
+      color
+    });
   }
 
   draw() {
@@ -652,10 +683,20 @@ export class GameEngine {
         this.ctx.arc(x, y, radius, 0, Math.PI * 2);
         this.ctx.fill();
         
-        this.ctx.fillStyle = '#000000';
+        this.ctx.fillStyle = '#1a0033';
         this.ctx.beginPath();
-        this.ctx.arc(x, y, radius * 0.3, 0, Math.PI * 2);
+        this.ctx.arc(x, y, radius * 0.4, 0, Math.PI * 2);
         this.ctx.fill();
+
+        this.ctx.strokeStyle = 'rgba(138, 43, 226, 0.8)';
+        this.ctx.lineWidth = 4;
+        const time = performance.now() / 200;
+        for (let j = 0; j < 3; j++) {
+          this.ctx.beginPath();
+          const angleOffset = (Math.PI * 2 / 3) * j + time;
+          this.ctx.arc(x, y, radius * 0.3, angleOffset, angleOffset + Math.PI);
+          this.ctx.stroke();
+        }
         
         this.ctx.restore();
       }
@@ -681,10 +722,21 @@ export class GameEngine {
       this.ctx.arc(x, y, radius, 0, Math.PI * 2);
       this.ctx.fill();
       
-      this.ctx.fillStyle = '#000000';
+      this.ctx.fillStyle = '#1a0033'; // Dark purple instead of black
       this.ctx.beginPath();
-      this.ctx.arc(x, y, radius * 0.3, 0, Math.PI * 2);
+      this.ctx.arc(x, y, radius * 0.4, 0, Math.PI * 2);
       this.ctx.fill();
+      
+      // Swirling effects inside
+      this.ctx.strokeStyle = 'rgba(138, 43, 226, 0.8)';
+      this.ctx.lineWidth = 4;
+      const time = performance.now() / 200;
+      for (let j = 0; j < 3; j++) {
+        this.ctx.beginPath();
+        const angleOffset = (Math.PI * 2 / 3) * j + time;
+        this.ctx.arc(x, y, radius * 0.3, angleOffset, angleOffset + Math.PI);
+        this.ctx.stroke();
+      }
       
       this.ctx.restore();
     }
@@ -722,6 +774,35 @@ export class GameEngine {
         this.ctx.lineTo(slash.p2.x - this.camera.x, slash.p2.y - this.camera.y);
         this.ctx.stroke();
       }
+    }
+
+    // Draw Visual Slashes
+    for (let i = this.visualSlashes.length - 1; i >= 0; i--) {
+      const slash = this.visualSlashes[i];
+      slash.timer -= 16.66; // approx dt
+      if (slash.timer <= 0) {
+        this.visualSlashes.splice(i, 1);
+        continue;
+      }
+      
+      const progress = 1 - (slash.timer / slash.maxTimer);
+      const length = 100 * Math.sin(progress * Math.PI);
+      const thickness = 10 * (1 - progress);
+      
+      this.ctx.save();
+      this.ctx.translate(slash.x - this.camera.x, slash.y - this.camera.y);
+      this.ctx.rotate(slash.angle);
+      this.ctx.fillStyle = slash.color;
+      this.ctx.shadowBlur = 10;
+      this.ctx.shadowColor = slash.color;
+      this.ctx.beginPath();
+      this.ctx.ellipse(0, 0, length, thickness, 0, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.fillStyle = '#ffffff';
+      this.ctx.beginPath();
+      this.ctx.ellipse(0, 0, length * 0.8, thickness * 0.3, 0, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.restore();
     }
   }
 

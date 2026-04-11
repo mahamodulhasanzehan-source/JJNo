@@ -30,8 +30,8 @@ export class DomainManager {
       this.purpleVectors = [];
       this.whiteFlashTimer = 500; // 500ms white flash
     } else if (type === 'Sukuna') {
-      this.timer = 10000; // 10s duration
-      this.maxTimer = 10000;
+      this.timer = 8000; // 8s duration
+      this.maxTimer = 8000;
       this.sukunaSlashesRemaining = 10;
       this.sukunaCurrentLine = null;
       this.sukunaSlashes = [];

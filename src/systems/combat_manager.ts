@@ -29,17 +29,21 @@ export function updateCombatStats(
   let newSecondaryHitTimer = secondaryHitTimer;
   let newBleedTimer = bleedTimer;
 
+  let didSecondaryHit = false;
   if (secondaryHitTimer > 0) {
     newSecondaryHitTimer -= dt;
     if (newSecondaryHitTimer <= 0) {
       newHp -= 3; // Secondary hit damage
+      didSecondaryHit = true;
     }
   }
 
+  let didBleedHit = false;
   if (bleedTimer > 0) {
     newBleedTimer -= dt;
     if (newBleedTimer <= 0) {
       newHp -= bleedDamage;
+      didBleedHit = true;
     }
   }
 
@@ -53,7 +57,9 @@ export function updateCombatStats(
     newBrainDamageTimer,
     newHp,
     newSecondaryHitTimer,
-    newBleedTimer
+    newBleedTimer,
+    didSecondaryHit,
+    didBleedHit
   };
 }
 

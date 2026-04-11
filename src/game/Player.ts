@@ -15,7 +15,7 @@ export class Player extends Entity {
   }
 
   update(dt: number, groundY: number, projectiles: Projectile[], particles: Particle[], triggerShake: () => void, isYujiDomainActive: boolean = false) {
-    this.updateStats(dt);
+    const statsResult = this.updateStats(dt);
     
     // Movement
     const result = handlePlayerMovement(
@@ -55,6 +55,15 @@ export class Player extends Entity {
       const vx = this.facingRight ? 15 : -15;
       projectiles.push(new Projectile(this.pos.x + (this.facingRight ? this.width : -20), this.pos.y + 20, vx, 0, this.id, '#00ffff', 'E', this.characterType));
       soundManager.playBlast();
+      
+      // Extra E particles
+      for(let i=0; i<15; i++) {
+        particles.push(new Particle(
+          this.pos.x + this.width/2, this.pos.y + this.height/2,
+          (Math.random() - 0.5) * 15 + vx, (Math.random() - 0.5) * 15,
+          400, '#00ffff', 6
+        ));
+      }
     }
 
     const qCooldown = isYujiDomainActive ? 500 : 1000;
@@ -62,21 +71,26 @@ export class Player extends Entity {
       this.energy -= Q_COST;
       this.cooldowns.q = qCooldown;
       this.phaseTimer = 15 * 16.66; // 15 frames
-      this.vel.x = this.facingRight ? 25 : -25; // Dash forward
+      let dashSpeed = 25;
+      if (this.characterType === 'Gojo') {
+        dashSpeed *= 1.25; // 25% farther
+      }
+      this.vel.x = this.facingRight ? dashSpeed : -dashSpeed; // Dash forward
       this.hasHitDash = false;
       triggerShake();
       soundManager.playDash();
       
       // Dash particles
-      for(let i=0; i<10; i++) {
+      for(let i=0; i<20; i++) {
         particles.push(new Particle(
           this.pos.x + this.width/2, this.pos.y + this.height/2,
-          (Math.random() - 0.5) * 10, (Math.random() - 0.5) * 10,
-          200, '#ff00ff', 5
+          (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20,
+          300, this.color, 8
         ));
       }
     }
 
     this.updatePhysics(dt, groundY);
+    return statsResult;
   }
 }

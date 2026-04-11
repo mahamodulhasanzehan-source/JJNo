@@ -103,6 +103,11 @@ export class Entity {
         this.cooldowns[key] -= dt;
       }
     }
+
+    return {
+      didSecondaryHit: result.didSecondaryHit,
+      didBleedHit: result.didBleedHit
+    };
   }
 
   draw(ctx: CanvasRenderingContext2D, camera: Vector2) {

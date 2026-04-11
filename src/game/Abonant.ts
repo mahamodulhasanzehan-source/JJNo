@@ -25,7 +25,7 @@ export class Abonant extends Entity {
   }
 
   update(dt: number, groundY: number, player: Player, projectiles: Projectile[], particles: Particle[], triggerShake: () => void, isSukunaDomainActive: boolean = false, isYujiDomainActive: boolean = false) {
-    this.updateStats(dt);
+    const statsResult = this.updateStats(dt);
     this.target = player;
     
     this.reactionTimer -= dt;
@@ -36,6 +36,7 @@ export class Abonant extends Entity {
 
     this.executeState(dt, projectiles, particles, triggerShake, isSukunaDomainActive, isYujiDomainActive);
     this.updatePhysics(dt, groundY);
+    return statsResult;
   }
 
   think(projectiles: Projectile[]) {
@@ -145,6 +146,14 @@ export class Abonant extends Entity {
           this.cooldowns.e = 800;
           const vx = this.facingRight ? 15 : -15;
           projectiles.push(new Projectile(this.pos.x + (this.facingRight ? this.width : -20), this.pos.y + 20, vx, 0, this.id, '#ff0000', 'E', this.characterType));
+          
+          for(let i=0; i<15; i++) {
+            particles.push(new Particle(
+              this.pos.x + this.width/2, this.pos.y + this.height/2,
+              (Math.random() - 0.5) * 15 + vx, (Math.random() - 0.5) * 15,
+              400, '#ff0000', 6
+            ));
+          }
         }
         this.state = 'IDLE';
         break;
@@ -153,14 +162,18 @@ export class Abonant extends Entity {
           this.energy -= Q_COST;
           this.cooldowns.q = 1500;
           this.phaseTimer = 15 * 16.66;
-          this.vel.x = this.facingRight ? 20 : -20;
+          let dashSpeed = 20;
+          if (this.characterType === 'Gojo') {
+            dashSpeed *= 1.25;
+          }
+          this.vel.x = this.facingRight ? dashSpeed : -dashSpeed;
           this.hasHitDash = false;
           triggerShake();
-          for(let i=0; i<10; i++) {
+          for(let i=0; i<20; i++) {
             particles.push(new Particle(
               this.pos.x + this.width/2, this.pos.y + this.height/2,
-              (Math.random() - 0.5) * 10, (Math.random() - 0.5) * 10,
-              200, '#ff0000', 5
+              (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20,
+              300, this.color, 8
             ));
           }
         }
