@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { collection, onSnapshot, doc, setDoc, deleteDoc, query } from 'firebase/firestore';
+import { db } from '../firebase';
 import { CharacterType } from '../game/Types';
 import { soundManager } from '../game/SoundManager';
 
@@ -15,128 +16,53 @@ interface MatchmakingSidebarProps {
 }
 
 export default function MatchmakingSidebar({ selectedCharacter, onMatchStart }: MatchmakingSidebarProps) {
-  const [socket, setSocket] = useState<Socket | null>(null);
   const [lobby, setLobby] = useState<LobbyEntry[]>([]);
   const [inQueue, setInQueue] = useState(false);
   const [status, setStatus] = useState('');
   
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const roomRef = useRef<string>('');
-  const onMatchStartRef = useRef(onMatchStart);
-  const selectedCharacterRef = useRef(selectedCharacter);
-  const inQueueRef = useRef(inQueue);
+  const playerId = useRef(`Player_${Math.floor(Math.random()*1000)}`).current;
 
   useEffect(() => {
-    onMatchStartRef.current = onMatchStart;
-    selectedCharacterRef.current = selectedCharacter;
-    inQueueRef.current = inQueue;
-  }, [onMatchStart, selectedCharacter, inQueue]);
-
-  useEffect(() => {
-    const s = io({ transports: ['websocket'] });
-    setSocket(s);
-
-    s.on('connect', () => {
-      // If we were in the queue and reconnected, rejoin the queue
-      if (inQueueRef.current && selectedCharacterRef.current) {
-        s.emit('join_q2play', { 
-          name: `Player_${Math.floor(Math.random()*1000)}`, 
-          character: selectedCharacterRef.current 
-        });
-      }
-    });
-
-    s.on('lobby_update', (entries: LobbyEntry[]) => {
+    const q = query(collection(db, 'lobbies'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const entries: LobbyEntry[] = [];
+      snapshot.forEach((doc) => entries.push(doc.data() as LobbyEntry));
       setLobby(entries);
     });
 
-    s.on('match_found', async ({ room, role }) => {
-      setStatus(`Match found! Connecting as ${role}...`);
-      roomRef.current = room;
-      setInQueue(false);
-      
-      const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
-      const pc = new RTCPeerConnection(configuration);
-      pcRef.current = pc;
-
-      pc.onicecandidate = (event) => {
-        if (event.candidate) {
-          s.emit('webrtc_ice_candidate', { room, candidate: event.candidate });
-        }
-      };
-
-      pc.onconnectionstatechange = () => {
-        if (pc.connectionState === 'connected') {
-          setStatus('Connected!');
-        }
-      };
-
-      if (role === 'host') {
-        const dc = pc.createDataChannel('game_sync', { negotiated: true, id: 0 });
-        dc.onopen = () => onMatchStartRef.current('host', dc, pc);
-        
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        s.emit('webrtc_offer', { room, offer });
-      } else {
-        const dc = pc.createDataChannel('game_sync', { negotiated: true, id: 0 });
-        dc.onopen = () => onMatchStartRef.current('client', dc, pc);
-      }
-    });
-
-    s.on('webrtc_offer', async (offer) => {
-      const pc = pcRef.current;
-      if (!pc) return;
-      await pc.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-      s.emit('webrtc_answer', { room: roomRef.current, answer });
-    });
-
-    s.on('webrtc_answer', async (answer) => {
-      const pc = pcRef.current;
-      if (!pc) return;
-      await pc.setRemoteDescription(new RTCSessionDescription(answer));
-    });
-
-    s.on('webrtc_ice_candidate', async (candidate) => {
-      const pc = pcRef.current;
-      if (!pc) return;
-      await pc.addIceCandidate(new RTCIceCandidate(candidate));
-    });
-
-    return () => { s.disconnect(); };
+    return () => unsubscribe();
   }, []);
 
-  const handleQ2Play = () => {
+  const handleQ2Play = async () => {
     if (!selectedCharacter) {
       alert("Please select a character first!");
       return;
     }
     soundManager.playClick();
-    socket?.emit('join_q2play', { 
-      name: `Player_${Math.floor(Math.random()*1000)}`, 
+    
+    await setDoc(doc(db, 'lobbies', playerId), { 
+      id: playerId, 
+      name: playerId,
       character: selectedCharacter 
     });
+    
     setInQueue(true);
     setStatus('Waiting in queue...');
   };
 
-  const handleLeave = () => {
+  const handleLeave = async () => {
     soundManager.playClick();
-    socket?.emit('leave_q2play');
+    await deleteDoc(doc(db, 'lobbies', playerId));
     setInQueue(false);
     setStatus('');
   };
 
   const handleChallenge = (targetId: string) => {
-    if (!selectedCharacter) {
-      alert("Please select a character first!");
-      return;
-    }
-    soundManager.playClick();
-    socket?.emit('challenge_player', targetId);
-    setStatus('Challenging player...');
+    // WebRTC signaling logic would go here, 
+    // but we'll keep the UI for now.
+    alert("Challenging feature needs WebRTC signaling update to Firestore!");
   };
 
   return (
@@ -163,7 +89,7 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart }: 
       
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         <h3 className="text-xs text-zinc-500 uppercase tracking-widest mb-4 font-mono">Public Lobby</h3>
-        {lobby.filter(e => e.id !== socket?.id).map(entry => (
+        {lobby.filter(e => e.id !== playerId).map(entry => (
           <div key={entry.id} className="p-4 bg-zinc-900 border border-zinc-800 flex justify-between items-center group hover:border-zinc-600 transition-colors">
             <div>
               <p className="text-sm font-bold text-white">{entry.name}</p>
@@ -177,7 +103,7 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart }: 
             </button>
           </div>
         ))}
-        {lobby.filter(e => e.id !== socket?.id).length === 0 && (
+        {lobby.filter(e => e.id !== playerId).length === 0 && (
           <p className="text-sm text-zinc-600 font-mono text-center mt-8">No players waiting.</p>
         )}
       </div>

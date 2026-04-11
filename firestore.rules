@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: lobbies
+    // Document ID: playerId (string)
+    // Fields:
+    //   - id: string (required, immutable) - The socket ID of the player.
+    //   - name: string (required, 1-50 chars) - The display name of the player.
+    //   - character: string (required, enum: ['Yuji', 'Gojo', 'Sukuna']) - The character selected.
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(playerId) {
+      return isAuthenticated() && request.auth.uid == playerId;
+    }
+
+    function isValidLobbyEntry(data) {
+      return data.keys().hasAll(['id', 'name', 'character']) &&
+             data.keys().hasOnly(['id', 'name', 'character']) &&
+             data.id is string && data.id.size() > 0 && data.id.size() < 100 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 50 &&
+             data.character in ['Yuji', 'Gojo', 'Sukuna'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+    match /lobbies/{playerId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isOwner(playerId) && isValidLobbyEntry(request.resource.data);
+      allow update: if isAuthenticated() && isOwner(playerId) && isValidLobbyEntry(request.resource.data);
+      allow delete: if isAuthenticated() && isOwner(playerId);
+    }
+  }
+}

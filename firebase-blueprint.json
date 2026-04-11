@@ -1,0 +1,21 @@
+{
+  "entities": {
+    "LobbyEntry": {
+      "title": "LobbyEntry",
+      "description": "An entry representing a player in the matchmaking lobby.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The socket ID of the player." },
+        "name": { "type": "string", "description": "The display name of the player." },
+        "character": { "type": "string", "description": "The character selected by the player." }
+      },
+      "required": ["id", "name", "character"]
+    }
+  },
+  "firestore": {
+    "/lobbies/{playerId}": {
+      "schema": "LobbyEntry",
+      "description": "The collection of players currently waiting in the matchmaking lobby."
+    }
+  }
+}
