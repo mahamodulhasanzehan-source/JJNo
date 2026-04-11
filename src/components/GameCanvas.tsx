@@ -7,10 +7,9 @@ import { HUD, EndGameScreen } from '../systems/ui_renderer';
 
 interface GameCanvasProps {
   character: CharacterType;
-  graphicsMode: 'HIGH' | 'LOW';
 }
 
-export default function GameCanvas({ character, graphicsMode }: GameCanvasProps) {
+export default function GameCanvas({ character }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [engine, setEngine] = useState<GameEngine | null>(null);
   const [gameState, setGameState] = useState({
@@ -19,12 +18,6 @@ export default function GameCanvas({ character, graphicsMode }: GameCanvasProps)
     domainActive: false, domainType: null as CharacterType | null, domainTimer: 0,
     gameOver: false, winner: null as 'player' | 'abonant' | null
   });
-
-  useEffect(() => {
-    if (engine) {
-      engine.graphicsMode = graphicsMode;
-    }
-  }, [graphicsMode, engine]);
 
   useEffect(() => {
     if (!canvasRef.current) return;

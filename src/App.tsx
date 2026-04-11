@@ -5,26 +5,11 @@ import { soundManager } from './game/SoundManager';
 
 export default function App() {
   const [character, setCharacter] = useState<CharacterType | null>(null);
-  const [graphicsMode, setGraphicsMode] = useState<'HIGH' | 'LOW'>('HIGH');
 
   if (character) {
     return (
       <>
-        <GameCanvas character={character} graphicsMode={graphicsMode} />
-        <div className="absolute top-4 right-4 z-50 flex gap-2">
-          <button 
-            onClick={() => setGraphicsMode('LOW')}
-            className={`px-3 py-1 rounded font-bold text-sm transition-colors ${graphicsMode === 'LOW' ? 'bg-white text-black' : 'bg-black/50 text-white border border-white/30 hover:bg-white/10'}`}
-          >
-            LOW
-          </button>
-          <button 
-            onClick={() => setGraphicsMode('HIGH')}
-            className={`px-3 py-1 rounded font-bold text-sm transition-colors ${graphicsMode === 'HIGH' ? 'bg-white text-black' : 'bg-black/50 text-white border border-white/30 hover:bg-white/10'}`}
-          >
-            HIGH
-          </button>
-        </div>
+        <GameCanvas character={character} />
       </>
     );
   }

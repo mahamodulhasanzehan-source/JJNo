@@ -51,6 +51,16 @@ export class GameEngine {
   isRunning: boolean = false;
   animationFrameId: number | null = null;
 
+  activeHollowPurples: {
+    pos: Vector2;
+    vel: Vector2;
+    radius: number;
+    targetRadius: number;
+    damageTimer: number;
+    ownerId: string;
+    formingTimer: number;
+  }[] = [];
+
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
@@ -283,30 +293,6 @@ export class GameEngine {
         this.camera,
         this.domainManager.purpleVectors
       );
-      // Linear damage stacking if lasers are active
-      if (this.domainManager.gojoLaserThickness > 0) {
-        const target = currentDomainOwner === this.player.id ? this.abonant : this.player;
-        let contactCount = 0;
-        for (const vec of this.domainManager.purpleVectors) {
-          const dx = vec.end.x - vec.start.x;
-          const dy = vec.end.y - vec.start.y;
-          const dist = Math.hypot(dx, dy) || 1;
-          const extX = vec.start.x + (dx / dist) * 2000;
-          const extY = vec.start.y + (dy / dist) * 2000;
-          // Add 20px padding to the collision rect to account for the visual thickness of the laser
-          if (this.lineRectCollide(vec.start, {x: extX, y: extY}, target.getRect(), 20)) {
-            contactCount++;
-          }
-        }
-        if (contactCount > 0) {
-          // 14.7 DMG/s per laser (1.75x of previous 8.4)
-          if (target.takeDamage((14.7 * contactCount * dt) / 1000, true, 'Gojo', currentDomainOwner)) {
-            if (Math.random() > 0.8) {
-              this.triggerHitSpark(target.pos.x + target.width/2, target.pos.y + target.height/2, '#8a2be2');
-            }
-          }
-        }
-      }
     } else if (wasDomainActive && !isDomainActive && currentDomainType === 'Gojo') {
       applyGojoDomainCollapse(
         this.player,
@@ -314,7 +300,80 @@ export class GameEngine {
         currentDomainOwner === this.player.id,
         () => soundManager.playBeam()
       );
+      
+      const owner = currentDomainOwner === this.player.id ? this.player : this.abonant;
+      const target = currentDomainOwner === this.player.id ? this.abonant : this.player;
+      
+      if (this.domainManager.purpleVectors.length > 0) {
+        const vec = this.domainManager.purpleVectors[0];
+        const dx = vec.end.x - vec.start.x;
+        const dy = vec.end.y - vec.start.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const speed = 400; // px per second
+        this.activeHollowPurples.push({
+          pos: { ...vec.start },
+          vel: { x: (dx / dist) * speed, y: (dy / dist) * speed },
+          radius: 80,
+          targetRadius: 80,
+          damageTimer: 0,
+          ownerId: currentDomainOwner!,
+          formingTimer: 0
+        });
+      } else {
+        const dx = target.pos.x - owner.pos.x;
+        const dy = target.pos.y - owner.pos.y;
+        const dist = Math.hypot(dx, dy) || 1;
+        const speed = 400;
+        this.activeHollowPurples.push({
+          pos: { x: owner.pos.x + owner.width/2, y: owner.pos.y + owner.height/2 },
+          vel: { x: (dx / dist) * speed, y: (dy / dist) * speed },
+          radius: 10,
+          targetRadius: 80,
+          damageTimer: 0,
+          ownerId: currentDomainOwner!,
+          formingTimer: 2000
+        });
+      }
       this.domainManager.purpleVectors = [];
+    }
+
+    // Update Hollow Purples
+    for (let i = this.activeHollowPurples.length - 1; i >= 0; i--) {
+      const hp = this.activeHollowPurples[i];
+      const target = hp.ownerId === this.player.id ? this.abonant : this.player;
+      
+      if (hp.formingTimer > 0) {
+        hp.formingTimer -= dt;
+        hp.radius = hp.targetRadius - (hp.targetRadius - 10) * Math.max(0, hp.formingTimer / 2000);
+      } else {
+        hp.pos.x += hp.vel.x * (dt / 1000);
+        hp.pos.y += hp.vel.y * (dt / 1000);
+        
+        const dx = hp.pos.x - (target.pos.x + target.width/2);
+        const dy = hp.pos.y - (target.pos.y + target.height/2);
+        const dist = Math.hypot(dx, dy);
+        
+        if (dist < hp.radius * 4) {
+          const force = 800 / Math.max(dist / 50, 1);
+          target.vel.x += (dx / dist) * force * (dt / 1000);
+          target.vel.y += (dy / dist) * force * (dt / 1000);
+          
+          if (dist < hp.radius) {
+            hp.damageTimer -= dt;
+            if (hp.damageTimer <= 0) {
+              if (target.takeDamage(25, false, 'Gojo', hp.ownerId)) {
+                this.triggerHitSpark(target.pos.x + target.width/2, target.pos.y + target.height/2, '#8a2be2');
+                this.triggerShake(15);
+              }
+              hp.damageTimer = 750;
+            }
+          }
+        }
+      }
+      
+      if (hp.pos.x < -1000 || hp.pos.x > this.worldWidth + 1000 || hp.pos.y < -1000 || hp.pos.y > this.canvas.height + 1000) {
+        this.activeHollowPurples.splice(i, 1);
+      }
     }
 
     // Sukuna Domain Logic
@@ -557,55 +616,77 @@ export class GameEngine {
     for (const p of this.projectiles) p.draw(this.ctx, this.camera);
     for (const p of this.particles) p.draw(this.ctx, this.camera);
 
-    // Draw Gojo Lasers
+    // Draw Gojo Lasers / Hollow Purple
     if (this.domainManager.active && this.domainManager.type === 'Gojo') {
-      if (this.domainManager.gojoLaserThickness > 0) {
-        this.ctx.save();
-        this.ctx.shadowBlur = 20;
-        this.ctx.shadowColor = '#8a2be2';
-        for (const vec of this.domainManager.purpleVectors) {
-          const dx = vec.end.x - vec.start.x;
-          const dy = vec.end.y - vec.start.y;
-          const dist = Math.hypot(dx, dy) || 1;
-          const extX = vec.start.x + (dx / dist) * 2000;
-          const extY = vec.start.y + (dy / dist) * 2000;
-
-          const thickness = 40 * this.domainManager.gojoLaserThickness;
-          
-          const grad = this.ctx.createLinearGradient(
-            vec.start.x - this.camera.x, vec.start.y - this.camera.y,
-            extX - this.camera.x, extY - this.camera.y
-          );
-          grad.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
-          grad.addColorStop(0.5, 'rgba(138, 43, 226, 0.8)');
-          grad.addColorStop(1, 'rgba(138, 43, 226, 0.5)');
-
-          this.ctx.strokeStyle = grad;
-          this.ctx.lineWidth = thickness;
-          this.ctx.lineCap = 'round';
-          this.ctx.beginPath();
-          this.ctx.moveTo(vec.start.x - this.camera.x, vec.start.y - this.camera.y);
-          this.ctx.lineTo(extX - this.camera.x, extY - this.camera.y);
-          this.ctx.stroke();
-          
-          // Core
-          this.ctx.strokeStyle = '#ffffff';
-          this.ctx.lineWidth = thickness * 0.3;
-          this.ctx.stroke();
-        }
-        this.ctx.restore();
-      } else {
-        this.ctx.strokeStyle = 'rgba(138, 43, 226, 0.5)';
-        this.ctx.lineWidth = 2;
-        this.ctx.setLineDash([5, 5]);
-        for (const vec of this.domainManager.purpleVectors) {
-          this.ctx.beginPath();
-          this.ctx.moveTo(vec.start.x - this.camera.x, vec.start.y - this.camera.y);
-          this.ctx.lineTo(vec.end.x - this.camera.x, vec.end.y - this.camera.y);
-          this.ctx.stroke();
-        }
-        this.ctx.setLineDash([]);
+      this.ctx.strokeStyle = 'rgba(138, 43, 226, 0.5)';
+      this.ctx.lineWidth = 2;
+      this.ctx.setLineDash([5, 5]);
+      for (const vec of this.domainManager.purpleVectors) {
+        this.ctx.beginPath();
+        this.ctx.moveTo(vec.start.x - this.camera.x, vec.start.y - this.camera.y);
+        this.ctx.lineTo(vec.end.x - this.camera.x, vec.end.y - this.camera.y);
+        this.ctx.stroke();
       }
+      this.ctx.setLineDash([]);
+
+      if (this.domainManager.timer <= 2000 && this.domainManager.purpleVectors.length > 0) {
+        const vec = this.domainManager.purpleVectors[0];
+        const progress = 1 - (this.domainManager.timer / 2000);
+        const radius = 10 + 70 * progress;
+        
+        this.ctx.save();
+        this.ctx.shadowBlur = 30;
+        this.ctx.shadowColor = '#8a2be2';
+        
+        const x = vec.start.x - this.camera.x;
+        const y = vec.start.y - this.camera.y;
+
+        const grad = this.ctx.createRadialGradient(x, y, 0, x, y, radius);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.2, '#8a2be2');
+        grad.addColorStop(0.8, 'rgba(75, 0, 130, 0.8)');
+        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+        this.ctx.fillStyle = grad;
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        this.ctx.fillStyle = '#000000';
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, radius * 0.3, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        this.ctx.restore();
+      }
+    }
+
+    for (const hp of this.activeHollowPurples) {
+      this.ctx.save();
+      this.ctx.shadowBlur = 30;
+      this.ctx.shadowColor = '#8a2be2';
+      
+      const x = hp.pos.x - this.camera.x;
+      const y = hp.pos.y - this.camera.y;
+      const radius = hp.radius;
+
+      const grad = this.ctx.createRadialGradient(x, y, 0, x, y, radius);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(0.2, '#8a2be2');
+      grad.addColorStop(0.8, 'rgba(75, 0, 130, 0.8)');
+      grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+
+      this.ctx.fillStyle = grad;
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+      this.ctx.fill();
+      
+      this.ctx.fillStyle = '#000000';
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, radius * 0.3, 0, Math.PI * 2);
+      this.ctx.fill();
+      
+      this.ctx.restore();
     }
 
     // Draw Sukuna Slashes

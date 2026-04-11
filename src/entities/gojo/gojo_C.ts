@@ -20,22 +20,22 @@ export function handleGojoDomainInput(
   player.vel.y = 0;
   
   if (isOwnerPlayer) {
-    if (mouseJustPressed && purpleVectors.length < 5) {
+    if (mouseJustPressed && purpleVectors.length === 0) {
       purpleVectors.push({
         start: { x: player.pos.x + player.width/2, y: player.pos.y + player.height/2 },
         end: { x: mouseX + camera.x, y: mouseY + camera.y }
       });
-    } else if (isMouseDown && purpleVectors.length > 0) {
-      purpleVectors[purpleVectors.length - 1].end = {
+    } else if (isMouseDown && purpleVectors.length === 1) {
+      purpleVectors[0].end = {
         x: mouseX + camera.x, y: mouseY + camera.y
       };
     }
   } else {
     // AI Gojo targets player automatically
-    if (purpleVectors.length < 5 && Math.random() < 0.05) {
+    if (purpleVectors.length === 0) {
       purpleVectors.push({
         start: { x: abonant.pos.x + abonant.width/2, y: abonant.pos.y + abonant.height/2 },
-        end: { x: player.pos.x + player.width/2 + (Math.random() - 0.5) * 100, y: player.pos.y + player.height/2 + (Math.random() - 0.5) * 100 }
+        end: { x: player.pos.x + player.width/2, y: player.pos.y + player.height/2 }
       });
     }
   }

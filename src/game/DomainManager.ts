@@ -9,8 +9,6 @@ export class DomainManager {
   maxTimer: number = 0;
   
   // Gojo specific
-  gojoTargetingTimer: number = 0;
-  gojoLaserThickness: number = 0;
   purpleVectors: { start: Vector2, end: Vector2 }[] = [];
   whiteFlashTimer: number = 0;
   
@@ -27,10 +25,8 @@ export class DomainManager {
     this.type = type;
     
     if (type === 'Gojo') {
-      this.timer = 10000; // 10s total duration
-      this.maxTimer = 10000;
-      this.gojoTargetingTimer = 2000; // 2s targeting phase
-      this.gojoLaserThickness = 0;
+      this.timer = 5000; // 5s total duration
+      this.maxTimer = 5000;
       this.purpleVectors = [];
       this.whiteFlashTimer = 500; // 500ms white flash
     } else if (type === 'Sukuna') {
@@ -55,11 +51,6 @@ export class DomainManager {
     }
 
     if (this.type === 'Gojo') {
-      this.gojoTargetingTimer -= dt;
-      if (this.gojoTargetingTimer <= 0) {
-        // Transition to full thickness instantly
-        this.gojoLaserThickness = 1;
-      }
       if (this.whiteFlashTimer > 0) this.whiteFlashTimer -= dt;
       // Spawn ambient void particles
       if (Math.random() > 0.8) {

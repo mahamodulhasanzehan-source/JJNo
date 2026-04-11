@@ -45,7 +45,7 @@ export function handleSukunaDomainInput(
     } else if (mouseJustReleased && sukunaCurrentLine) {
       const hit = lineRectCollide(sukunaCurrentLine.start, sukunaCurrentLine.end, abonant.getRect());
       if (hit) {
-         abonant.takeDamage(6); // Reduced to 6 DMG per slash
+         abonant.takeDamage(7.2); // Increased to 7.2 DMG per slash (20% more)
       }
       setSukunaSlashesRemaining(sukunaSlashesRemaining - 1);
       setSlashRateLimitTimer(500); // 500ms rate limit (2 per second)
@@ -66,7 +66,7 @@ export function handleSukunaDomainInput(
       const p2 = { x: player.pos.x + player.width/2 + (Math.random() - 0.5) * 100, y: player.pos.y + player.height/2 + (Math.random() - 0.5) * 100 };
       
       if (lineRectCollide(p1, p2, player.getRect())) {
-         player.takeDamage(6);
+         player.takeDamage(7.2);
          setSukunaSlashesRemaining(sukunaSlashesRemaining - 1);
          setSlashRateLimitTimer(500); // 500ms rate limit
          sukunaSlashes.push({
