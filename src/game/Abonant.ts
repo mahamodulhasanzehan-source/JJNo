@@ -65,7 +65,8 @@ export class Abonant extends Entity {
     }
 
     // Domain Counter / Attempt Domain if player is low on health
-    if (this.energy >= 60 && this.target.hp < 30) {
+    const domainCost = this.characterType === 'Gojo' ? 75 : 70;
+    if (this.energy >= domainCost && this.target.hp < 50) {
        this.state = 'DOMAIN';
        return;
     }

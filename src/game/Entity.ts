@@ -11,8 +11,8 @@ export class Entity {
   width: number = 40;
   height: number = 80;
   
-  hp: number = 125;
-  maxHp: number = 125;
+  hp: number = 200;
+  maxHp: number = 200;
   energy: number = 15;
   stamina: number = STAMINA_MAX;
   isDashing: boolean = false;

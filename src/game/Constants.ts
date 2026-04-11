@@ -15,7 +15,7 @@ export const E_COST = 5;
 export const E_DMG = 5;
 export const Q_COST = 10;
 export const Q_DMG = 15;
-export const C_COST = 60;
+export const C_COST = 70;
 
 export const FPS = 60;
 export const FRAME_TIME = 1000 / FPS;

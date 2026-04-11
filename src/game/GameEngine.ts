@@ -225,7 +225,7 @@ export class GameEngine {
     this.lastMouseDown = this.input.mouse.isDown;
 
     // Domain Expansion Input (Player)
-    const playerDomainCost = this.player.characterType === 'Gojo' ? 70 : C_COST;
+    const playerDomainCost = this.player.characterType === 'Gojo' ? 75 : C_COST;
     if (this.input.isKeyDown('c') && this.player.energy >= playerDomainCost && this.player.cooldowns.c <= 0 && !this.domainManager.active) {
       this.player.energy -= playerDomainCost;
       this.player.cooldowns.c = 60000; // 60s cooldown
@@ -239,7 +239,7 @@ export class GameEngine {
     }
 
     // Domain Expansion (Abonant)
-    const abonantDomainCost = this.abonant.characterType === 'Gojo' ? 70 : C_COST;
+    const abonantDomainCost = this.abonant.characterType === 'Gojo' ? 75 : C_COST;
     if (this.abonant.state === 'DOMAIN' && this.abonant.energy >= abonantDomainCost && this.abonant.cooldowns.c <= 0 && !this.domainManager.active) {
       this.abonant.energy -= abonantDomainCost;
       this.abonant.cooldowns.c = 60000;
