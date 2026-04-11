@@ -3,7 +3,8 @@ import { Player } from './Player';
 import { Projectile } from './Projectile';
 import { Particle } from './Particle';
 import { E_COST, Q_COST } from './Constants';
-import { CharacterType } from './Types';
+import { CharacterType, Vector2 } from './Types';
+import { InputManager } from './InputManager';
 
 type AIState = 'IDLE' | 'APPROACH' | 'RETREAT' | 'ATTACK_E' | 'ATTACK_Q' | 'BAIT' | 'DESPERATION' | 'DOMAIN';
 
@@ -12,8 +13,9 @@ export class Abonant extends Entity {
   stateTimer: number = 0;
   target: Player | null = null;
   reactionTimer: number = 0;
+  input?: InputManager;
 
-  constructor(id: string, x: number, y: number) {
+  constructor(id: string, x: number, y: number, input?: InputManager) {
     const types: CharacterType[] = ['Gojo', 'Sukuna', 'Yuji'];
     const randomType = types[Math.floor(Math.random() * types.length)];
     const colors = {
@@ -22,16 +24,21 @@ export class Abonant extends Entity {
       'Yuji': '#ff6b6b'
     };
     super(id, x, y, randomType, colors[randomType]);
+    this.input = input;
   }
 
   update(dt: number, groundY: number, player: Player, projectiles: Projectile[], particles: Particle[], triggerShake: () => void, isSukunaDomainActive: boolean = false, isYujiDomainActive: boolean = false) {
     const statsResult = this.updateStats(dt);
     this.target = player;
     
-    this.reactionTimer -= dt;
-    if (this.reactionTimer <= 0) {
-      this.think(projectiles);
-      this.reactionTimer = 150 + Math.random() * 100; // 150-250ms reaction time
+    if (this.input) {
+      this.handleInput(dt);
+    } else {
+      this.reactionTimer -= dt;
+      if (this.reactionTimer <= 0) {
+        this.think(projectiles, isSukunaDomainActive, isYujiDomainActive);
+        this.reactionTimer = 150 + Math.random() * 100; // 150-250ms reaction time
+      }
     }
 
     this.executeState(dt, projectiles, particles, triggerShake, isSukunaDomainActive, isYujiDomainActive);
@@ -39,7 +46,43 @@ export class Abonant extends Entity {
     return statsResult;
   }
 
-  think(projectiles: Projectile[]) {
+  handleInput(dt: number) {
+    if (!this.input) return;
+    
+    this.state = 'IDLE';
+    
+    if (this.input.isKeyDown('a')) {
+      this.state = this.facingRight ? 'RETREAT' : 'APPROACH';
+      this.facingRight = false;
+    } else if (this.input.isKeyDown('d')) {
+      this.state = this.facingRight ? 'APPROACH' : 'RETREAT';
+      this.facingRight = true;
+    }
+
+    if (this.input.isKeyDown('w') || this.input.isKeyDown(' ')) {
+      if (this.isGrounded) {
+        this.vel.y = -15;
+        this.isGrounded = false;
+      }
+    }
+
+    if (this.input.isKeyDown('shift')) {
+      // Dash handled in executeState or we can just set a flag
+      this.isDashing = true;
+    } else {
+      this.isDashing = false;
+    }
+
+    if (this.input.isKeyDown('e')) {
+      this.state = 'ATTACK_E';
+    } else if (this.input.isKeyDown('q')) {
+      this.state = 'ATTACK_Q';
+    } else if (this.input.isKeyDown('c')) {
+      this.state = 'DOMAIN';
+    }
+  }
+
+  think(projectiles: Projectile[], isSukunaDomainActive: boolean = false, isYujiDomainActive: boolean = false) {
     if (!this.target) return;
     const dist = this.target.pos.x - this.pos.x;
     const absDist = Math.abs(dist);
@@ -72,7 +115,7 @@ export class Abonant extends Entity {
 
     // Domain Usage: Be much more proactive if we have the energy
     const domainCost = this.characterType === 'Gojo' ? 75 : 70;
-    if (this.energy >= domainCost) {
+    if (this.energy >= domainCost && this.cooldowns.c <= 0 && !isSukunaDomainActive && !isYujiDomainActive) {
        if (Math.random() > 0.05) { // 95% chance to use domain when available
            this.state = 'DOMAIN';
            return;
@@ -169,13 +212,16 @@ export class Abonant extends Entity {
         if (this.energy >= E_COST && this.cooldowns.e <= 0) {
           this.energy -= E_COST;
           this.cooldowns.e = 800;
-          const vx = this.facingRight ? 15 : -15;
-          projectiles.push(new Projectile(this.pos.x + (this.facingRight ? this.width : -20), this.pos.y + 20, vx, 0, this.id, '#ff0000', 'E', this.characterType));
+          
+          let vx = this.facingRight ? 15 : -15;
+          let vy = 0;
+          
+          projectiles.push(new Projectile(this.pos.x + (this.facingRight ? this.width : -20), this.pos.y + 20, vx, vy, this.id, '#ff0000', 'E', this.characterType));
           
           for(let i=0; i<15; i++) {
             particles.push(new Particle(
               this.pos.x + this.width/2, this.pos.y + this.height/2,
-              (Math.random() - 0.5) * 15 + vx, (Math.random() - 0.5) * 15,
+              (Math.random() - 0.5) * 15 + vx, (Math.random() - 0.5) * 15 + vy,
               400, '#ff0000', 6
             ));
           }
@@ -191,7 +237,10 @@ export class Abonant extends Entity {
           if (this.characterType === 'Gojo') {
             dashSpeed *= 1.25;
           }
+          
           this.vel.x = this.facingRight ? dashSpeed : -dashSpeed;
+          this.vel.y = 0;
+          
           this.hasHitDash = false;
           triggerShake();
           for(let i=0; i<20; i++) {

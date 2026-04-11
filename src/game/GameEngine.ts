@@ -51,6 +51,12 @@ export class GameEngine {
   isRunning: boolean = false;
   animationFrameId: number | null = null;
 
+  mode: 'single' | 'multi' = 'single';
+  role?: 'host' | 'guest';
+  opponentInput: InputManager;
+  onStateUpdate?: (state: any) => void;
+  onClientInput?: (input: any) => void;
+
   activeHollowPurples: {
     pos: Vector2;
     vel: Vector2;
@@ -71,13 +77,20 @@ export class GameEngine {
     color: string;
   }[] = [];
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, mode: 'single' | 'multi' = 'single', role?: 'host' | 'guest') {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
     this.input = new InputManager();
+    this.opponentInput = new InputManager();
+    this.mode = mode;
+    this.role = role;
     
     this.player = new Player('player', 200, 300, this.input);
-    this.abonant = new Abonant('abonant', 800, 300);
+    if (mode === 'multi') {
+      this.abonant = new Abonant('abonant', 800, 300, this.opponentInput);
+    } else {
+      this.abonant = new Abonant('abonant', 800, 300);
+    }
     this.domainManager = new DomainManager();
     
     this.groundY = this.canvas.height - 50;
@@ -206,6 +219,79 @@ export class GameEngine {
     }
   }
 
+  getState() {
+    return {
+      player: {
+        pos: this.player.pos, vel: this.player.vel, hp: this.player.hp, energy: this.player.energy, stamina: this.player.stamina,
+        facingRight: this.player.facingRight, phaseTimer: this.player.phaseTimer,
+        cooldowns: this.player.cooldowns, characterType: this.player.characterType, isDashing: this.player.isDashing
+      },
+      abonant: {
+        pos: this.abonant.pos, vel: this.abonant.vel, hp: this.abonant.hp, energy: this.abonant.energy, stamina: this.abonant.stamina,
+        state: this.abonant.state, facingRight: this.abonant.facingRight, phaseTimer: this.abonant.phaseTimer,
+        cooldowns: this.abonant.cooldowns, characterType: this.abonant.characterType, isDashing: this.abonant.isDashing
+      },
+      projectiles: this.projectiles.map(p => ({
+        pos: p.pos, vel: p.vel, active: p.active, ownerId: p.ownerId, color: p.color, characterType: p.characterType, abilityType: p.abilityType
+      })),
+      particles: this.particles.map(p => ({
+        pos: p.pos, vel: p.vel, life: p.life, maxLife: p.maxLife, color: p.color, size: p.size
+      })),
+      domain: {
+        active: this.domainManager.active, type: this.domainManager.type, ownerId: this.domainManager.ownerId, timer: this.domainManager.timer
+      },
+      camera: this.camera,
+      screenShake: this.screenShake,
+      gameOver: this.gameOver,
+      winner: this.winner
+    };
+  }
+
+  setState(state: any) {
+    if (!state) return;
+    
+    if (this.role === 'guest') {
+      Object.assign(this.abonant, state.player);
+      Object.assign(this.player, state.abonant);
+      
+      // Swap IDs back so local logic works
+      this.player.id = 'player';
+      this.abonant.id = 'abonant';
+    } else {
+      Object.assign(this.player, state.player);
+      Object.assign(this.abonant, state.abonant);
+    }
+
+    this.domainManager.active = state.domain.active;
+    this.domainManager.type = state.domain.type;
+    this.domainManager.ownerId = this.role === 'guest' 
+      ? (state.domain.ownerId === 'player' ? 'abonant' : 'player')
+      : state.domain.ownerId;
+    this.domainManager.timer = state.domain.timer;
+    this.camera = state.camera;
+    this.screenShake = state.screenShake;
+    this.gameOver = state.gameOver;
+    this.winner = this.role === 'guest' && state.winner
+      ? (state.winner === 'player' ? 'abonant' : 'player')
+      : state.winner;
+    
+    // Reconstruct projectiles and particles simply for visual sync
+    this.projectiles = state.projectiles.map((p: any) => {
+      const ownerId = this.role === 'guest' 
+        ? (p.ownerId === 'player' ? 'abonant' : 'player')
+        : p.ownerId;
+      const proj = new Projectile(p.pos.x, p.pos.y, p.vel.x, p.vel.y, ownerId, p.color, p.abilityType, p.characterType);
+      proj.active = p.active;
+      proj.abilityType = p.abilityType;
+      return proj;
+    });
+    this.particles = state.particles.map((p: any) => {
+      const part = new Particle(p.pos.x, p.pos.y, p.vel.x, p.vel.y, p.maxLife, p.color, p.size);
+      part.life = p.life;
+      return part;
+    });
+  }
+
   update(dt: number) {
     if (this.gameOver) {
       if (this.slowMoTimer > 0) {
@@ -228,7 +314,7 @@ export class GameEngine {
     const playerDomainCost = this.player.characterType === 'Gojo' ? 75 : C_COST;
     if (this.input.isKeyDown('c') && this.player.energy >= playerDomainCost && this.player.cooldowns.c <= 0 && !this.domainManager.active) {
       this.player.energy -= playerDomainCost;
-      this.player.cooldowns.c = 60000; // 60s cooldown
+      this.player.cooldowns.c = 15000; // 15s cooldown
       this.domainManager.activate(this.player.id, this.player.characterType);
       this.chromaticAberration = 10;
       this.triggerShake(10);
@@ -242,7 +328,7 @@ export class GameEngine {
     const abonantDomainCost = this.abonant.characterType === 'Gojo' ? 75 : C_COST;
     if (this.abonant.state === 'DOMAIN' && this.abonant.energy >= abonantDomainCost && this.abonant.cooldowns.c <= 0 && !this.domainManager.active) {
       this.abonant.energy -= abonantDomainCost;
-      this.abonant.cooldowns.c = 60000;
+      this.abonant.cooldowns.c = 15000;
       this.domainManager.activate(this.abonant.id, this.abonant.characterType);
       this.chromaticAberration = 10;
       this.triggerShake(10);
@@ -415,8 +501,8 @@ export class GameEngine {
     }
 
     if (!(isDomainActive && currentDomainType === 'Gojo')) {
-      const playerStats = this.player.update(dt, this.groundY, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Yuji');
-      const abonantStats = this.abonant.update(dt, this.groundY, this.player, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Sukuna', isDomainActive && currentDomainType === 'Yuji');
+      const playerStats = this.player.update(dt, this.groundY, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Yuji' && currentDomainOwner !== this.player.id);
+      const abonantStats = this.abonant.update(dt, this.groundY, this.player, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Sukuna', isDomainActive && currentDomainType === 'Yuji' && currentDomainOwner !== this.abonant.id);
 
       if (playerStats?.didSecondaryHit || playerStats?.didBleedHit) {
         this.spawnVisualSlash(this.player.pos.x + this.player.width/2, this.player.pos.y + this.player.height/2, '#ff0000');
@@ -888,8 +974,34 @@ export class GameEngine {
     // Cap dt to prevent huge jumps if tab is inactive
     const cappedDt = Math.min(dt, 32);
     
-    this.update(cappedDt);
-    this.draw();
+    if (this.mode === 'multi' && this.role === 'guest') {
+      // Guest only sends inputs and draws received state
+      if (this.onClientInput) {
+        // Convert keys object to array for serialization
+        const keysArray = Object.keys(this.input.keys).filter(k => this.input.keys[k]);
+        this.onClientInput({
+          keys: keysArray,
+          mouse: this.input.mouse
+        });
+      }
+      this.draw();
+    } else {
+      // Single or Host mode
+      if (this.mode === 'multi' && this.role === 'host') {
+        // Apply remote inputs to abonant
+        if (!this.abonant.input) {
+          // We already created a new InputManager for opponentInput in constructor
+          this.abonant.input = this.opponentInput;
+        }
+      }
+
+      this.update(cappedDt);
+      this.draw();
+
+      if (this.mode === 'multi' && this.role === 'host' && this.onStateUpdate) {
+        this.onStateUpdate(this.getState());
+      }
+    }
     
     this.animationFrameId = requestAnimationFrame(this.loop.bind(this));
   }

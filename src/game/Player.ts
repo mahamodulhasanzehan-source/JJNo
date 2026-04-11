@@ -5,6 +5,7 @@ import { E_COST, Q_COST, C_COST, Q_DMG } from './Constants';
 import { Particle } from './Particle';
 import { soundManager } from './SoundManager';
 import { handlePlayerMovement } from '../systems/movement';
+import { Vector2 } from './Types';
 
 export class Player extends Entity {
   input: InputManager;
@@ -34,16 +35,6 @@ export class Player extends Entity {
 
     // Handle Input Latency
     const isKeyDown = (key: string) => {
-      // Very simple latency simulation: if latencyTimer > 0, we could ignore inputs or just randomly drop them, 
-      // but a true 70ms delay requires an input queue. 
-      // For simplicity, we'll just randomly drop inputs to simulate latency if we don't have a queue.
-      // Actually, let's just use the current input. The prompt says "70ms delay to all enemy actions".
-      // If the player is the enemy of Gojo, they get latency.
-      if (this.latencyTimer > 0) {
-        // Simple simulation: 70ms is about 4 frames. We can just use a small chance to ignore new inputs.
-        // Or we can just leave it as is if it's too complex to add a queue right now.
-        // Let's add a simple queue.
-      }
       return this.input.isKeyDown(key);
     };
 
@@ -52,15 +43,20 @@ export class Player extends Entity {
     if (isKeyDown('e') && this.cooldowns.e <= 0 && this.energy >= E_COST && this.stunTimer <= 0) {
       this.energy -= E_COST;
       this.cooldowns.e = eCooldown;
+      
+      const centerX = this.pos.x + this.width / 2;
+      const centerY = this.pos.y + this.height / 2;
       const vx = this.facingRight ? 15 : -15;
-      projectiles.push(new Projectile(this.pos.x + (this.facingRight ? this.width : -20), this.pos.y + 20, vx, 0, this.id, '#00ffff', 'E', this.characterType));
+      const vy = 0;
+      
+      projectiles.push(new Projectile(centerX, centerY, vx, vy, this.id, '#00ffff', 'E', this.characterType));
       soundManager.playBlast();
       
       // Extra E particles
       for(let i=0; i<15; i++) {
         particles.push(new Particle(
-          this.pos.x + this.width/2, this.pos.y + this.height/2,
-          (Math.random() - 0.5) * 15 + vx, (Math.random() - 0.5) * 15,
+          centerX, centerY,
+          (Math.random() - 0.5) * 15 + vx, (Math.random() - 0.5) * 15 + vy,
           400, '#00ffff', 6
         ));
       }
@@ -75,7 +71,12 @@ export class Player extends Entity {
       if (this.characterType === 'Gojo') {
         dashSpeed *= 1.25; // 25% farther
       }
-      this.vel.x = this.facingRight ? dashSpeed : -dashSpeed; // Dash forward
+      
+      const centerX = this.pos.x + this.width / 2;
+      const centerY = this.pos.y + this.height / 2;
+      this.vel.x = this.facingRight ? dashSpeed : -dashSpeed;
+      this.vel.y = 0;
+      
       this.hasHitDash = false;
       triggerShake();
       soundManager.playDash();
@@ -83,7 +84,7 @@ export class Player extends Entity {
       // Dash particles
       for(let i=0; i<20; i++) {
         particles.push(new Particle(
-          this.pos.x + this.width/2, this.pos.y + this.height/2,
+          centerX, centerY,
           (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20,
           300, this.color, 8
         ));
