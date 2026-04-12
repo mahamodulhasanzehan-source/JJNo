@@ -37,6 +37,11 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
   
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const matchRef = useRef<Match | null>(null);
+  const onPreparingRef = useRef(onPreparing);
+
+  useEffect(() => {
+    onPreparingRef.current = onPreparing;
+  }, [onPreparing]);
 
   useEffect(() => {
     // Generate a random player ID if not in localStorage
@@ -63,6 +68,10 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
     const qGuest = query(collection(db, 'matches'), where('guestId', '==', playerId));
 
     const handleMatchUpdate = async (matchData: Match) => {
+      // Ignore finished matches or matches that are not our current active match
+      if (matchData.status === 'finished') return;
+      if (matchRef.current && matchRef.current.id !== matchData.id) return;
+
       const role = matchData.hostId === playerId ? 'host' : 'client';
       
       if (matchData.status === 'preparing' && (!matchRef.current || matchRef.current.status !== 'preparing')) {
@@ -71,7 +80,7 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
         setInQueue(false);
         // Remove from lobby
         await deleteDoc(doc(db, 'lobbies', playerId));
-        onPreparing(matchData, role);
+        onPreparingRef.current(matchData, role);
       }
 
       if (matchData.status === 'playing' && matchRef.current?.status !== 'playing') {
@@ -82,13 +91,17 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
 
       // Handle signaling
       if (role === 'host' && matchData.answer && !pcRef.current?.remoteDescription) {
-        await pcRef.current?.setRemoteDescription(new RTCSessionDescription(JSON.parse(matchData.answer)));
+        try {
+          await pcRef.current?.setRemoteDescription(new RTCSessionDescription(JSON.parse(matchData.answer)));
+        } catch (e) { console.error(e); }
       }
       if (role === 'client' && matchData.offer && !pcRef.current?.remoteDescription) {
-        await pcRef.current?.setRemoteDescription(new RTCSessionDescription(JSON.parse(matchData.offer)));
-        const answer = await pcRef.current?.createAnswer();
-        await pcRef.current?.setLocalDescription(answer);
-        await updateDoc(doc(db, 'matches', matchData.id), { answer: JSON.stringify(answer) });
+        try {
+          await pcRef.current?.setRemoteDescription(new RTCSessionDescription(JSON.parse(matchData.offer)));
+          const answer = await pcRef.current?.createAnswer();
+          await pcRef.current?.setLocalDescription(answer);
+          await updateDoc(doc(db, 'matches', matchData.id), { answer: JSON.stringify(answer) });
+        } catch (e) { console.error(e); }
       }
 
       // Handle ICE candidates
@@ -120,7 +133,7 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
         deleteDoc(doc(db, 'lobbies', playerId)).catch(console.error);
       }
     };
-  }, [playerId, onPreparing]);
+  }, [playerId]);
 
   const setupWebRTC = async (matchData: Match, role: 'host' | 'client') => {
     const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
@@ -156,16 +169,13 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
   };
 
   const handleQ2Play = async () => {
-    if (!selectedCharacter || !playerId) {
-      alert("Please select a character first!");
-      return;
-    }
+    if (!playerId) return;
     soundManager.playClick();
     
     await setDoc(doc(db, 'lobbies', playerId), { 
       id: playerId, 
       name: `Player_${playerId.substring(0, 4)}`,
-      character: selectedCharacter 
+      character: selectedCharacter || '?' 
     });
     
     setInQueue(true);
@@ -181,20 +191,18 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
   };
 
   const handleChallenge = async (targetId: string) => {
-    if (!selectedCharacter || !playerId) {
-      alert("Please select a character first!");
-      return;
-    }
+    if (!playerId) return;
     soundManager.playClick();
     setStatus('Challenging player...');
     
     // Create match
-    const matchRef = doc(collection(db, 'matches'));
-    await setDoc(matchRef, {
-      id: matchRef.id,
+    const matchDocRef = doc(collection(db, 'matches'));
+    await setDoc(matchDocRef, {
+      id: matchDocRef.id,
       hostId: playerId,
       guestId: targetId,
-      status: 'preparing'
+      status: 'preparing',
+      createdAt: Date.now()
     });
   };
 

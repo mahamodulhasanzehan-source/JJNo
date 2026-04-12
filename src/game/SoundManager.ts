@@ -28,7 +28,7 @@ export class SoundManager {
   }
 
   playHover() {
-    this.init();
+    if (!this.ctx || this.ctx.state === 'suspended') return; // Don't init on hover to avoid autoplay warning
     this.playTone(600, 'sine', 0.05, 0.02);
   }
 
@@ -172,3 +172,14 @@ export class SoundManager {
 }
 
 export const soundManager = new SoundManager();
+
+// Initialize AudioContext on first user interaction to comply with browser autoplay policies
+if (typeof window !== 'undefined') {
+  const initAudio = () => {
+    soundManager.init();
+    window.removeEventListener('click', initAudio);
+    window.removeEventListener('keydown', initAudio);
+  };
+  window.addEventListener('click', initAudio);
+  window.addEventListener('keydown', initAudio);
+}
