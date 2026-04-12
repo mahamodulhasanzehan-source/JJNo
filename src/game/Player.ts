@@ -22,7 +22,8 @@ export class Player extends Entity {
     const result = handlePlayerMovement(
       dt, this.input, this.vel, this.isGrounded, this.stamina, 
       this.staminaPenaltyTimer, this.slowTimer, this.stunTimer, this.latencyTimer,
-      isYujiDomainActive && this.characterType === 'Yuji'
+      isYujiDomainActive && this.characterType === 'Yuji',
+      this.characterType
     );
     
     this.vel = result.newVel;
@@ -39,17 +40,25 @@ export class Player extends Entity {
     };
 
     // Abilities
-    const eCooldown = isYujiDomainActive ? 250 : 500;
+    let baseECooldown = isYujiDomainActive ? 250 : 500;
+    if (this.characterType === 'Sukuna') baseECooldown *= 0.75; // 25% faster
+    
     if (isKeyDown('e') && this.cooldowns.e <= 0 && this.energy >= E_COST && this.stunTimer <= 0) {
       this.energy -= E_COST;
-      this.cooldowns.e = eCooldown;
+      this.cooldowns.e = baseECooldown;
       
       const centerX = this.pos.x + this.width / 2;
       const centerY = this.pos.y + this.height / 2;
-      const vx = this.facingRight ? 15 : -15;
+      
+      let speedMultiplier = this.characterType === 'Sukuna' ? 1.5 : 1;
+      const vx = (this.facingRight ? 15 : -15) * speedMultiplier;
       const vy = 0;
       
-      projectiles.push(new Projectile(centerX, centerY, vx, vy, this.id, '#00ffff', 'E', this.characterType));
+      let projColor = '#00ffff'; // Default Yuji
+      if (this.characterType === 'Gojo') projColor = '#8a2be2';
+      if (this.characterType === 'Sukuna') projColor = '#ff0000';
+      
+      projectiles.push(new Projectile(centerX, centerY, vx, vy, this.id, projColor, 'E', this.characterType));
       soundManager.playBlast();
       
       // Extra E particles
@@ -57,7 +66,7 @@ export class Player extends Entity {
         particles.push(new Particle(
           centerX, centerY,
           (Math.random() - 0.5) * 15 + vx, (Math.random() - 0.5) * 15 + vy,
-          400, '#00ffff', 6
+          400, projColor, 6
         ));
       }
     }

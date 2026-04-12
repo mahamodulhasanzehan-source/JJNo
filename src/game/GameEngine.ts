@@ -524,14 +524,15 @@ export class GameEngine {
       // Collision with entities
       const pRect = p.getRect();
       if (p.ownerId !== this.player.id && this.checkCollision(pRect, this.player.getRect())) {
-        if (this.player.takeDamage(E_DMG, isDomainActive, this.domainManager.type, this.domainManager.ownerId)) {
+        let damage = p.characterType === 'Sukuna' ? 4 : E_DMG;
+        if (this.player.takeDamage(damage, isDomainActive, this.domainManager.type, this.domainManager.ownerId)) {
           this.abonant.energy += 3; 
           this.applyAbilityEffects(this.player, p.characterType, p.abilityType, this.abonant);
           
-          // Yuji Knockback
+          // Yuji Knockback (2x)
           if (p.characterType === 'Yuji') {
-            this.player.vel.y = -10; // Pop upward
-            this.player.vel.x = p.vel.x > 0 ? 15 : -15; // Pop backward
+            this.player.vel.y = -20; // Pop upward
+            this.player.vel.x = p.vel.x > 0 ? 30 : -30; // Pop backward
             this.triggerHitSpark(p.pos.x, p.pos.y, '#f1c40f');
           }
           
@@ -545,15 +546,18 @@ export class GameEngine {
           p.active = false;
         }
       } else if (p.ownerId !== this.abonant.id && this.checkCollision(pRect, this.abonant.getRect())) {
-        const damage = (p.ownerId === this.player.id && isDomainActive && this.domainManager.type === 'Yuji') ? E_DMG * 1.5 : E_DMG;
+        let damage = p.characterType === 'Sukuna' ? 4 : E_DMG;
+        if (p.ownerId === this.player.id && isDomainActive && this.domainManager.type === 'Yuji') {
+          damage *= 1.5;
+        }
         if (this.abonant.takeDamage(damage, isDomainActive, this.domainManager.type, this.domainManager.ownerId)) {
           this.player.energy += 3;
           this.applyAbilityEffects(this.abonant, p.characterType, p.abilityType, this.player);
           
-          // Yuji Knockback
+          // Yuji Knockback (2x)
           if (p.characterType === 'Yuji') {
-            this.abonant.vel.y = -10;
-            this.abonant.vel.x = p.vel.x > 0 ? 15 : -15;
+            this.abonant.vel.y = -20;
+            this.abonant.vel.x = p.vel.x > 0 ? 30 : -30;
             this.triggerHitSpark(p.pos.x, p.pos.y, '#f1c40f');
           }
 
@@ -921,6 +925,22 @@ export class GameEngine {
       this.ctx.fill();
       this.ctx.restore();
     }
+
+    // Draw Player Diamond Indicator
+    this.ctx.save();
+    this.ctx.translate(this.player.pos.x + this.player.width / 2 - this.camera.x, this.player.pos.y - 30 - this.camera.y);
+    this.ctx.rotate(Math.PI / 4); // 45 degrees for diamond
+    this.ctx.fillStyle = '#3b82f6'; // Blue
+    this.ctx.fillRect(-8, -8, 16, 16);
+    this.ctx.restore();
+
+    // Draw Enemy Diamond Indicator
+    this.ctx.save();
+    this.ctx.translate(this.abonant.pos.x + this.abonant.width / 2 - this.camera.x, this.abonant.pos.y - 30 - this.camera.y);
+    this.ctx.rotate(Math.PI / 4); // 45 degrees for diamond
+    this.ctx.fillStyle = '#ef4444'; // Red
+    this.ctx.fillRect(-8, -8, 16, 16);
+    this.ctx.restore();
   }
 
   drawCityscape() {

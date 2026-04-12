@@ -55,6 +55,7 @@ export class Projectile {
 
     ctx.save();
     if (this.characterType === 'Gojo') {
+      ctx.globalAlpha = 0.6; // 40% transparent
       const grad = ctx.createRadialGradient(x + 10, y + 10, 0, x + 10, y + 10, 15);
       grad.addColorStop(0, '#ffffff');
       grad.addColorStop(1, '#8a2be2');
@@ -66,8 +67,9 @@ export class Projectile {
       ctx.strokeStyle = '#e74c3c';
       ctx.lineWidth = 4;
       ctx.beginPath();
-      ctx.moveTo(x, y);
-      ctx.lineTo(x + 20, y + 20);
+      const isRight = this.vel.x > 0;
+      ctx.moveTo(x + (isRight ? 0 : 20), y - 10);
+      ctx.quadraticCurveTo(x + (isRight ? 30 : -10), y + 10, x + (isRight ? 0 : 20), y + 30);
       ctx.stroke();
     } else if (this.characterType === 'Yuji') {
       ctx.fillStyle = '#f1c40f';

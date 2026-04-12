@@ -102,17 +102,42 @@ export function HUD({ gameState }: HUDProps) {
 
 interface EndGameScreenProps {
   winner: 'player' | 'abonant' | null;
+  playerCharacter?: CharacterType;
+  enemyCharacter?: CharacterType;
   onRestart: () => void;
 }
 
-export function EndGameScreen({ winner, onRestart }: EndGameScreenProps) {
+function getEndGameText(winner: 'player' | 'abonant', playerChar?: CharacterType, enemyChar?: CharacterType): string {
+  if (!playerChar || !enemyChar) return winner === 'player' ? "PURIFIED" : "CONSUMED";
+  
+  const winnerChar = winner === 'player' ? playerChar : enemyChar;
+  const loserChar = winner === 'player' ? enemyChar : playerChar;
+
+  if (winnerChar === 'Sukuna' && loserChar === 'Yuji') return "KNOW YOUR PLACE, BRAT";
+  if (winnerChar === 'Sukuna' && loserChar === 'Gojo') return "YOU WERE ORDINARY";
+  if (winnerChar === 'Gojo' && loserChar === 'Sukuna') return "I TOLD YOU I'D WIN";
+  if (winnerChar === 'Yuji' && loserChar === 'Sukuna') return "I'M YOU, SUKUNA";
+  
+  if (winnerChar === 'Gojo' && loserChar === 'Yuji') return "NOT BAD FOR A STUDENT";
+  if (winnerChar === 'Yuji' && loserChar === 'Gojo') return "I SURPASSED YOU, SENSEI";
+
+  if (winnerChar === 'Yuji' && loserChar === 'Yuji') return "THERE CAN BE ONLY ONE";
+  if (winnerChar === 'Gojo' && loserChar === 'Gojo') return "I AM THE STRONGEST";
+  if (winnerChar === 'Sukuna' && loserChar === 'Sukuna') return "TWO KINGS? UNACCEPTABLE";
+
+  return winner === 'player' ? "PURIFIED" : "CONSUMED";
+}
+
+export function EndGameScreen({ winner, playerCharacter, enemyCharacter, onRestart }: EndGameScreenProps) {
   if (!winner) return null;
+  
+  const text = getEndGameText(winner, playerCharacter, enemyCharacter);
   
   return (
     <div className={`absolute inset-0 z-50 flex flex-col items-center justify-center ${winner === 'player' ? 'bg-white/10' : 'bg-black/50'}`}>
-      <h1 className={`flex gap-1 text-8xl font-black tracking-tighter mb-8 ${winner === 'player' ? 'text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.8)]' : 'text-red-600 drop-shadow-[0_0_20px_rgba(255,0,0,0.8)]'}`}>
+      <h1 className={`flex gap-1 text-6xl md:text-8xl font-black tracking-tighter mb-8 text-center flex-wrap justify-center px-4 ${winner === 'player' ? 'text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.8)]' : 'text-red-600 drop-shadow-[0_0_20px_rgba(255,0,0,0.8)]'}`}>
         {winner === 'player' ? (
-          'PURIFIED'.split('').map((char, i) => {
+          text.split('').map((char, i) => {
             const angle = Math.random() * Math.PI * 2;
             const dist = 500 + Math.random() * 500;
             return (
@@ -120,15 +145,15 @@ export function EndGameScreen({ winner, onRestart }: EndGameScreenProps) {
                 key={i}
                 initial={{ opacity: 0, x: Math.cos(angle) * dist, y: Math.sin(angle) * dist, rotate: (Math.random() - 0.5) * 180, scale: 0, clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)' }}
                 animate={{ opacity: 1, x: 0, y: 0, rotate: 0, scale: 1, clipPath: 'polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%)' }}
-                transition={{ duration: 0.8, type: 'spring', bounce: 0.4, delay: i * 0.1 }}
+                transition={{ duration: 0.8, type: 'spring', bounce: 0.4, delay: i * 0.05 }}
                 className="inline-block"
               >
-                {char}
+                {char === ' ' ? '\u00A0' : char}
               </motion.span>
             );
           })
         ) : (
-          'YOU WERE CONSUMED'.split('').map((char, i) => {
+          text.split('').map((char, i) => {
             const angle = Math.random() * Math.PI * 2;
             const dist = 500 + Math.random() * 500;
             return (

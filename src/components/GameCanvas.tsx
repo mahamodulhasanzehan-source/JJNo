@@ -21,7 +21,8 @@ export default function GameCanvas({ character, networkMatch }: GameCanvasProps)
     playerHp: 200, playerEnergy: 0, playerStamina: STAMINA_MAX,
     enemyHp: 200, enemyEnergy: 0, enemyStamina: STAMINA_MAX,
     domainActive: false, domainType: null as CharacterType | null, domainTimer: 0,
-    gameOver: false, winner: null as 'player' | 'abonant' | null
+    gameOver: false, winner: null as 'player' | 'abonant' | null,
+    enemyCharacter: 'Yuji' as CharacterType
   });
 
   useEffect(() => {
@@ -103,7 +104,8 @@ export default function GameCanvas({ character, networkMatch }: GameCanvasProps)
         domainType: newEngine.domainManager.type,
         domainTimer: newEngine.domainManager.timer,
         gameOver: newEngine.gameOver,
-        winner: newEngine.winner
+        winner: newEngine.winner,
+        enemyCharacter: newEngine.abonant.characterType
       });
     }, 100);
 
@@ -129,7 +131,12 @@ export default function GameCanvas({ character, networkMatch }: GameCanvasProps)
         <p>[C] Domain Expansion (60 CE)</p>
         {networkMatch && <p className="text-red-500 mt-2">Multiplayer Mode: {networkMatch.role.toUpperCase()}</p>}
       </div>
-      <EndGameScreen winner={gameState.winner} onRestart={() => { soundManager.playClick(); window.location.reload(); }} />
+      <EndGameScreen 
+        winner={gameState.winner} 
+        playerCharacter={character}
+        enemyCharacter={gameState.enemyCharacter}
+        onRestart={() => { soundManager.playClick(); window.location.reload(); }} 
+      />
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { InputManager } from '../game/InputManager';
-import { Vector2 } from '../game/Types';
+import { Vector2, CharacterType } from '../game/Types';
 
 export const STAMINA_MAX = 3000;
 export const STAMINA_RECOVERY_RATE = 0.2; // 1s per 5s -> 1000ms per 5000ms
@@ -15,7 +15,8 @@ export function handlePlayerMovement(
   slowTimer: number,
   stunTimer: number,
   latencyTimer: number,
-  isYujiDomainActive: boolean
+  isYujiDomainActive: boolean,
+  characterType: CharacterType
 ): { newVel: Vector2, newStamina: number, newStaminaPenaltyTimer: number, facingRight: boolean | null } {
   let newVel = { ...vel };
   let newStamina = stamina;
@@ -29,6 +30,7 @@ export function handlePlayerMovement(
 
   if (stunTimer <= 0) {
     let speed = 5;
+    if (characterType === 'Gojo') speed *= 1.1; // Gojo is 10% faster
     if (slowTimer > 0) speed *= 0.85; // 15% slow
 
     const isSprinting = input.isKeyDown('shift') && newStamina > 0 && newStaminaPenaltyTimer <= 0;

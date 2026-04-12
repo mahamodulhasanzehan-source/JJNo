@@ -162,6 +162,7 @@ export class Abonant extends Entity {
 
   executeState(dt: number, projectiles: Projectile[], particles: Particle[], triggerShake: () => void, isSukunaDomainActive: boolean = false, isYujiDomainActive: boolean = false) {
     let speed = 4;
+    if (this.characterType === 'Gojo') speed *= 1.1; // Gojo is 10% faster
     if (this.staminaPenaltyTimer > 0) speed *= 0.7;
     if (isSukunaDomainActive) speed *= 0.5; // 50% slow
     if (this.brainDamageTimer > 0) speed *= 0.7; // 30% slow
@@ -211,18 +212,25 @@ export class Abonant extends Entity {
       case 'ATTACK_E':
         if (this.energy >= E_COST && this.cooldowns.e <= 0) {
           this.energy -= E_COST;
-          this.cooldowns.e = 800;
+          let baseECooldown = 800;
+          if (this.characterType === 'Sukuna') baseECooldown *= 0.75;
+          this.cooldowns.e = baseECooldown;
           
-          let vx = this.facingRight ? 15 : -15;
+          let speedMultiplier = this.characterType === 'Sukuna' ? 1.5 : 1;
+          let vx = (this.facingRight ? 15 : -15) * speedMultiplier;
           let vy = 0;
           
-          projectiles.push(new Projectile(this.pos.x + (this.facingRight ? this.width : -20), this.pos.y + 20, vx, vy, this.id, '#ff0000', 'E', this.characterType));
+          let projColor = '#00ffff';
+          if (this.characterType === 'Gojo') projColor = '#8a2be2';
+          if (this.characterType === 'Sukuna') projColor = '#ff0000';
+          
+          projectiles.push(new Projectile(this.pos.x + (this.facingRight ? this.width : -20), this.pos.y + 20, vx, vy, this.id, projColor, 'E', this.characterType));
           
           for(let i=0; i<15; i++) {
             particles.push(new Particle(
               this.pos.x + this.width/2, this.pos.y + this.height/2,
               (Math.random() - 0.5) * 15 + vx, (Math.random() - 0.5) * 15 + vy,
-              400, '#ff0000', 6
+              400, projColor, 6
             ));
           }
         }
