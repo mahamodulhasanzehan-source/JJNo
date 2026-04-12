@@ -90,17 +90,19 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
       }
 
       // Handle signaling
-      if (role === 'host' && matchData.answer && !pcRef.current?.remoteDescription) {
+      if (role === 'host' && matchData.answer && matchData.answer !== 'undefined' && !pcRef.current?.remoteDescription) {
         try {
           await pcRef.current?.setRemoteDescription(new RTCSessionDescription(JSON.parse(matchData.answer)));
         } catch (e) { console.error(e); }
       }
-      if (role === 'client' && matchData.offer && !pcRef.current?.remoteDescription) {
+      if (role === 'client' && matchData.offer && matchData.offer !== 'undefined' && !pcRef.current?.remoteDescription) {
         try {
           await pcRef.current?.setRemoteDescription(new RTCSessionDescription(JSON.parse(matchData.offer)));
           const answer = await pcRef.current?.createAnswer();
           await pcRef.current?.setLocalDescription(answer);
-          await updateDoc(doc(db, 'matches', matchData.id), { answer: JSON.stringify(answer) });
+          if (answer) {
+            await updateDoc(doc(db, 'matches', matchData.id), { answer: JSON.stringify(answer) });
+          }
         } catch (e) { console.error(e); }
       }
 
@@ -161,7 +163,9 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
       
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-      await updateDoc(doc(db, 'matches', matchData.id), { offer: JSON.stringify(offer) });
+      if (offer) {
+        await updateDoc(doc(db, 'matches', matchData.id), { offer: JSON.stringify(offer) });
+      }
     } else {
       const dc = pc.createDataChannel('game_sync', { negotiated: true, id: 0 });
       dc.onopen = () => onMatchStart('client', dc, pc);
