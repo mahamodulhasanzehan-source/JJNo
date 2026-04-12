@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { collection, onSnapshot, doc, setDoc, deleteDoc, query } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, deleteDoc, query, where, addDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { CharacterType } from '../game/Types';
 import { soundManager } from '../game/SoundManager';
@@ -10,33 +10,153 @@ interface LobbyEntry {
   character: string;
 }
 
+interface Match {
+  id: string;
+  hostId: string;
+  guestId: string;
+  status: 'preparing' | 'playing' | 'finished';
+  offer?: string;
+  answer?: string;
+  hostCandidates?: string;
+  guestCandidates?: string;
+  hostCharacter?: string;
+  guestCharacter?: string;
+}
+
 interface MatchmakingSidebarProps {
   selectedCharacter: CharacterType | null;
   onMatchStart: (role: 'host' | 'client', dataChannel: RTCDataChannel, peerConnection: RTCPeerConnection) => void;
+  onPreparing: (match: Match, role: 'host' | 'client') => void;
 }
 
-export default function MatchmakingSidebar({ selectedCharacter, onMatchStart }: MatchmakingSidebarProps) {
+export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, onPreparing }: MatchmakingSidebarProps) {
   const [lobby, setLobby] = useState<LobbyEntry[]>([]);
   const [inQueue, setInQueue] = useState(false);
   const [status, setStatus] = useState('');
+  const [playerId, setPlayerId] = useState<string>('');
   
   const pcRef = useRef<RTCPeerConnection | null>(null);
-  const roomRef = useRef<string>('');
-  const playerId = useRef(`Player_${Math.floor(Math.random()*1000)}`).current;
+  const matchRef = useRef<Match | null>(null);
 
   useEffect(() => {
+    // Generate a random player ID if not in localStorage
+    let storedId = localStorage.getItem('cursed_combat_player_id');
+    if (!storedId) {
+      storedId = 'player_' + Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('cursed_combat_player_id', storedId);
+    }
+    setPlayerId(storedId);
+  }, []);
+
+  useEffect(() => {
+    if (!playerId) return;
+
     const q = query(collection(db, 'lobbies'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const unsubscribeLobby = onSnapshot(q, (snapshot) => {
       const entries: LobbyEntry[] = [];
       snapshot.forEach((doc) => entries.push(doc.data() as LobbyEntry));
       setLobby(entries);
     });
 
-    return () => unsubscribe();
-  }, []);
+    // Listen for matches where I am host or guest
+    const qHost = query(collection(db, 'matches'), where('hostId', '==', playerId));
+    const qGuest = query(collection(db, 'matches'), where('guestId', '==', playerId));
+
+    const handleMatchUpdate = async (matchData: Match) => {
+      const role = matchData.hostId === playerId ? 'host' : 'client';
+      
+      if (matchData.status === 'preparing' && (!matchRef.current || matchRef.current.status !== 'preparing')) {
+        matchRef.current = matchData;
+        setStatus('Match found! Preparing...');
+        setInQueue(false);
+        // Remove from lobby
+        await deleteDoc(doc(db, 'lobbies', playerId));
+        onPreparing(matchData, role);
+      }
+
+      if (matchData.status === 'playing' && matchRef.current?.status !== 'playing') {
+        matchRef.current = matchData;
+        setStatus('Connecting peer...');
+        setupWebRTC(matchData, role);
+      }
+
+      // Handle signaling
+      if (role === 'host' && matchData.answer && !pcRef.current?.remoteDescription) {
+        await pcRef.current?.setRemoteDescription(new RTCSessionDescription(JSON.parse(matchData.answer)));
+      }
+      if (role === 'client' && matchData.offer && !pcRef.current?.remoteDescription) {
+        await pcRef.current?.setRemoteDescription(new RTCSessionDescription(JSON.parse(matchData.offer)));
+        const answer = await pcRef.current?.createAnswer();
+        await pcRef.current?.setLocalDescription(answer);
+        await updateDoc(doc(db, 'matches', matchData.id), { answer: JSON.stringify(answer) });
+      }
+
+      // Handle ICE candidates
+      const candidatesStr = role === 'host' ? matchData.guestCandidates : matchData.hostCandidates;
+      if (candidatesStr && pcRef.current?.remoteDescription) {
+        const candidates = JSON.parse(candidatesStr);
+        for (const c of candidates) {
+          try {
+            await pcRef.current?.addIceCandidate(new RTCIceCandidate(c));
+          } catch (e) {
+            console.error('Error adding ICE candidate', e);
+          }
+        }
+      }
+    };
+
+    const unsubscribeHost = onSnapshot(qHost, (snapshot) => {
+      snapshot.forEach(doc => handleMatchUpdate({ id: doc.id, ...doc.data() } as Match));
+    });
+    const unsubscribeGuest = onSnapshot(qGuest, (snapshot) => {
+      snapshot.forEach(doc => handleMatchUpdate({ id: doc.id, ...doc.data() } as Match));
+    });
+
+    return () => {
+      unsubscribeLobby();
+      unsubscribeHost();
+      unsubscribeGuest();
+      if (playerId) {
+        deleteDoc(doc(db, 'lobbies', playerId)).catch(console.error);
+      }
+    };
+  }, [playerId, onPreparing]);
+
+  const setupWebRTC = async (matchData: Match, role: 'host' | 'client') => {
+    const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+    const pc = new RTCPeerConnection(configuration);
+    pcRef.current = pc;
+
+    const candidates: RTCIceCandidateInit[] = [];
+    pc.onicecandidate = async (event) => {
+      if (event.candidate) {
+        candidates.push(event.candidate.toJSON());
+        const field = role === 'host' ? 'hostCandidates' : 'guestCandidates';
+        await updateDoc(doc(db, 'matches', matchData.id), { [field]: JSON.stringify(candidates) });
+      }
+    };
+
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'connected') {
+        setStatus('Connected!');
+      }
+    };
+
+    if (role === 'host') {
+      const dc = pc.createDataChannel('game_sync', { negotiated: true, id: 0 });
+      dc.onopen = () => onMatchStart('host', dc, pc);
+      
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await updateDoc(doc(db, 'matches', matchData.id), { offer: JSON.stringify(offer) });
+    } else {
+      const dc = pc.createDataChannel('game_sync', { negotiated: true, id: 0 });
+      dc.onopen = () => onMatchStart('client', dc, pc);
+    }
+  };
 
   const handleQ2Play = async () => {
-    if (!selectedCharacter) {
+    if (!selectedCharacter || !playerId) {
       alert("Please select a character first!");
       return;
     }
@@ -44,7 +164,7 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart }: 
     
     await setDoc(doc(db, 'lobbies', playerId), { 
       id: playerId, 
-      name: playerId,
+      name: `Player_${playerId.substring(0, 4)}`,
       character: selectedCharacter 
     });
     
@@ -53,16 +173,29 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart }: 
   };
 
   const handleLeave = async () => {
+    if (!playerId) return;
     soundManager.playClick();
     await deleteDoc(doc(db, 'lobbies', playerId));
     setInQueue(false);
     setStatus('');
   };
 
-  const handleChallenge = (targetId: string) => {
-    // WebRTC signaling logic would go here, 
-    // but we'll keep the UI for now.
-    alert("Challenging feature needs WebRTC signaling update to Firestore!");
+  const handleChallenge = async (targetId: string) => {
+    if (!selectedCharacter || !playerId) {
+      alert("Please select a character first!");
+      return;
+    }
+    soundManager.playClick();
+    setStatus('Challenging player...');
+    
+    // Create match
+    const matchRef = doc(collection(db, 'matches'));
+    await setDoc(matchRef, {
+      id: matchRef.id,
+      hostId: playerId,
+      guestId: targetId,
+      status: 'preparing'
+    });
   };
 
   return (

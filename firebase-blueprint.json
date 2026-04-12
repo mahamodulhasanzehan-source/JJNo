@@ -10,12 +10,34 @@
         "character": { "type": "string", "description": "The character selected by the player." }
       },
       "required": ["id", "name", "character"]
+    },
+    "Match": {
+      "title": "Match",
+      "description": "A match between two players.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "hostId": { "type": "string" },
+        "guestId": { "type": "string" },
+        "status": { "type": "string", "enum": ["preparing", "playing", "finished"] },
+        "offer": { "type": "string" },
+        "answer": { "type": "string" },
+        "hostCandidates": { "type": "string" },
+        "guestCandidates": { "type": "string" },
+        "hostCharacter": { "type": "string" },
+        "guestCharacter": { "type": "string" }
+      },
+      "required": ["id", "hostId", "guestId", "status"]
     }
   },
   "firestore": {
     "/lobbies/{playerId}": {
       "schema": "LobbyEntry",
       "description": "The collection of players currently waiting in the matchmaking lobby."
+    },
+    "/matches/{matchId}": {
+      "schema": "Match",
+      "description": "The collection of active matches."
     }
   }
 }

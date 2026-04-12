@@ -18,8 +18,8 @@ export default function GameCanvas({ character, networkMatch }: GameCanvasProps)
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [engine, setEngine] = useState<GameEngine | null>(null);
   const [gameState, setGameState] = useState({
-    playerHp: 100, playerEnergy: 0, playerStamina: STAMINA_MAX,
-    enemyHp: 100, enemyEnergy: 0, enemyStamina: STAMINA_MAX,
+    playerHp: 200, playerEnergy: 0, playerStamina: STAMINA_MAX,
+    enemyHp: 200, enemyEnergy: 0, enemyStamina: STAMINA_MAX,
     domainActive: false, domainType: null as CharacterType | null, domainTimer: 0,
     gameOver: false, winner: null as 'player' | 'abonant' | null
   });
@@ -62,6 +62,9 @@ export default function GameCanvas({ character, networkMatch }: GameCanvasProps)
       dc.onopen = () => {
         dc.send(JSON.stringify({ type: 'sync', characterType: character }));
       };
+      if (dc.readyState === 'open') {
+        dc.send(JSON.stringify({ type: 'sync', characterType: character }));
+      }
 
       if (newEngine.role === 'host') {
         newEngine.onStateUpdate = (state) => {
