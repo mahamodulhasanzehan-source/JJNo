@@ -31,6 +31,7 @@ export function handlePlayerMovement(
   if (stunTimer <= 0) {
     let speed = 5;
     if (characterType === 'Gojo') speed *= 1.1; // Gojo is 10% faster
+    if (isYujiDomainActive) speed *= 1.2; // Yuji is 20% faster in his domain
     if (slowTimer > 0) speed *= 0.85; // 15% slow
 
     const isSprinting = input.isKeyDown('shift') && newStamina > 0 && newStaminaPenaltyTimer <= 0;

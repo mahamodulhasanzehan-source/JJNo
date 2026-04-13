@@ -95,6 +95,11 @@ function PreparingScreen({ match, role, initialCharacter, onComplete }: { match:
   const [timeLeft, setTimeLeft] = useState(5);
   const [selected, setSelected] = useState<CharacterType | null>(initialCharacter);
   const hasCompleted = React.useRef(false);
+  const onCompleteRef = React.useRef(onComplete);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   useEffect(() => {
     if (timeLeft <= 0 && !hasCompleted.current) {
@@ -117,7 +122,7 @@ function PreparingScreen({ match, role, initialCharacter, onComplete }: { match:
           }, 1000);
         }
         
-        onComplete(finalChar!);
+        onCompleteRef.current(finalChar!);
       };
       updateMatch();
       return;
@@ -129,7 +134,7 @@ function PreparingScreen({ match, role, initialCharacter, onComplete }: { match:
       }, 1000);
       return () => clearInterval(timer);
     }
-  }, [timeLeft, selected, match.id, role, onComplete]);
+  }, [timeLeft, selected, match.id, role]);
 
   return (
     <div className="min-h-screen bg-black text-zinc-50 flex flex-col items-center justify-center p-8 font-sans">

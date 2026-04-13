@@ -16,7 +16,8 @@ export class Player extends Entity {
   }
 
   update(dt: number, groundY: number, projectiles: Projectile[], particles: Particle[], triggerShake: () => void, isYujiDomainActive: boolean = false) {
-    const statsResult = this.updateStats(dt);
+    const energyRegenMultiplier = (isYujiDomainActive && this.characterType === 'Yuji') ? 1.5 : 1.0;
+    const statsResult = this.updateStats(dt, energyRegenMultiplier);
     
     // Movement
     const result = handlePlayerMovement(

@@ -304,7 +304,8 @@ export class GameEngine {
 
     // Domain Expansion Input (Player)
     const playerDomainCost = this.player.characterType === 'Gojo' ? 75 : C_COST;
-    if (this.input.isKeyDown('c') && this.player.energy >= playerDomainCost && this.player.cooldowns.c <= 0 && !this.domainManager.active) {
+    const canPlayerActivateDomain = !this.domainManager.active || (this.domainManager.type !== 'Yuji' && this.domainManager.ownerId !== this.player.id);
+    if (this.input.isKeyDown('c') && this.player.energy >= playerDomainCost && this.player.cooldowns.c <= 0 && canPlayerActivateDomain) {
       this.player.energy -= playerDomainCost;
       this.player.cooldowns.c = 15000; // 15s cooldown
       this.domainManager.activate(this.player.id, this.player.characterType);
@@ -318,7 +319,8 @@ export class GameEngine {
 
     // Domain Expansion (Abonant)
     const abonantDomainCost = this.abonant.characterType === 'Gojo' ? 75 : C_COST;
-    if (this.abonant.state === 'DOMAIN' && this.abonant.energy >= abonantDomainCost && this.abonant.cooldowns.c <= 0 && !this.domainManager.active) {
+    const canAbonantActivateDomain = !this.domainManager.active || (this.domainManager.type !== 'Yuji' && this.domainManager.ownerId !== this.abonant.id);
+    if (this.abonant.state === 'DOMAIN' && this.abonant.energy >= abonantDomainCost && this.abonant.cooldowns.c <= 0 && canAbonantActivateDomain) {
       this.abonant.energy -= abonantDomainCost;
       this.abonant.cooldowns.c = 15000;
       this.domainManager.activate(this.abonant.id, this.abonant.characterType);
@@ -493,8 +495,8 @@ export class GameEngine {
     }
 
     if (!(isDomainActive && currentDomainType === 'Gojo')) {
-      const playerStats = this.player.update(dt, this.groundY, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Yuji' && currentDomainOwner !== this.player.id);
-      const abonantStats = this.abonant.update(dt, this.groundY, this.player, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Sukuna', isDomainActive && currentDomainType === 'Yuji' && currentDomainOwner !== this.abonant.id);
+      const playerStats = this.player.update(dt, this.groundY, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Yuji' && currentDomainOwner === this.player.id);
+      const abonantStats = this.abonant.update(dt, this.groundY, this.player, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Sukuna', isDomainActive && currentDomainType === 'Yuji' && currentDomainOwner === this.abonant.id);
 
       if (playerStats?.didSecondaryHit || playerStats?.didBleedHit) {
         this.spawnVisualSlash(this.player.pos.x + this.player.width/2, this.player.pos.y + this.player.height/2, '#ff0000');
@@ -523,8 +525,8 @@ export class GameEngine {
           
           // Yuji Knockback (2x)
           if (p.characterType === 'Yuji') {
-            this.player.vel.y = -20; // Pop upward
-            this.player.vel.x = p.vel.x > 0 ? 30 : -30; // Pop backward
+            this.player.vel.y = -10; // Reduced upward pop
+            this.player.vel.x = p.vel.x > 0 ? 45 : -45; // Increased backward pop
             this.triggerHitSpark(p.pos.x, p.pos.y, '#f1c40f');
           }
           
@@ -548,8 +550,8 @@ export class GameEngine {
           
           // Yuji Knockback (2x)
           if (p.characterType === 'Yuji') {
-            this.abonant.vel.y = -20;
-            this.abonant.vel.x = p.vel.x > 0 ? 30 : -30;
+            this.abonant.vel.y = -10; // Reduced upward pop
+            this.abonant.vel.x = p.vel.x > 0 ? 45 : -45; // Increased backward pop
             this.triggerHitSpark(p.pos.x, p.pos.y, '#f1c40f');
           }
 

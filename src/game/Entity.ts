@@ -70,12 +70,12 @@ export class Entity {
     this.isGrounded = result.newIsGrounded;
   }
 
-  updateStats(dt: number) {
+  updateStats(dt: number, energyRegenMultiplier: number = 1.0) {
     const result = updateCombatStats(
       dt, this.energy, this.staminaPenaltyTimer, this.phaseTimer, 
       this.stunTimer, this.latencyTimer, this.slowTimer, 
       this.secondaryHitTimer, this.bleedTimer, this.brainDamageTimer,
-      this.hp, this.bleedDamage
+      this.hp, this.bleedDamage, energyRegenMultiplier
     );
     
     this.energy = result.newEnergy;

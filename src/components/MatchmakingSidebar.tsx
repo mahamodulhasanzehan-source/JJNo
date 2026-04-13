@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { collection, onSnapshot, doc, setDoc, deleteDoc, query, where, addDoc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, deleteDoc, query, where, updateDoc, or } from 'firebase/firestore';
 import { db } from '../firebase';
 import { CharacterType } from '../game/Types';
 import { soundManager } from '../game/SoundManager';
@@ -38,10 +38,16 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const matchRef = useRef<Match | null>(null);
   const onPreparingRef = useRef(onPreparing);
+  const onMatchStartRef = useRef(onMatchStart);
+  const processedCandidatesRef = useRef<number>(0);
 
   useEffect(() => {
     onPreparingRef.current = onPreparing;
   }, [onPreparing]);
+
+  useEffect(() => {
+    onMatchStartRef.current = onMatchStart;
+  }, [onMatchStart]);
 
   useEffect(() => {
     // Generate a random player ID if not in localStorage
@@ -61,11 +67,18 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
       const entries: LobbyEntry[] = [];
       snapshot.forEach((doc) => entries.push(doc.data() as LobbyEntry));
       setLobby(entries);
+    }, (error) => {
+      console.error("Error listening to lobbies:", error);
     });
 
     // Listen for matches where I am host or guest
-    const qHost = query(collection(db, 'matches'), where('hostId', '==', playerId));
-    const qGuest = query(collection(db, 'matches'), where('guestId', '==', playerId));
+    const qMatches = query(
+      collection(db, 'matches'),
+      or(
+        where('hostId', '==', playerId),
+        where('guestId', '==', playerId)
+      )
+    );
 
     const handleMatchUpdate = async (matchData: Match) => {
       // Ignore finished matches or matches that are not our current active match
@@ -94,47 +107,51 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
       }
 
       // Handle signaling
-      if (role === 'host' && matchData.answer && matchData.answer !== 'undefined' && pcRef.current?.signalingState === 'have-local-offer') {
-        try {
-          await pcRef.current.setRemoteDescription(new RTCSessionDescription(JSON.parse(matchData.answer)));
-        } catch (e) { console.error('Error setting remote answer:', e); }
-      }
-      if (role === 'client' && matchData.offer && matchData.offer !== 'undefined' && pcRef.current?.signalingState === 'stable' && !pcRef.current.remoteDescription) {
-        try {
-          await pcRef.current.setRemoteDescription(new RTCSessionDescription(JSON.parse(matchData.offer)));
-          const answer = await pcRef.current.createAnswer();
-          await pcRef.current.setLocalDescription(answer);
-          if (answer) {
-            await updateDoc(doc(db, 'matches', matchData.id), { answer: JSON.stringify(answer) });
-          }
-        } catch (e) { console.error('Error handling offer:', e); }
-      }
-
-      // Handle ICE candidates
-      const candidatesStr = role === 'host' ? matchData.guestCandidates : matchData.hostCandidates;
-      if (candidatesStr && pcRef.current?.remoteDescription) {
-        const candidates = JSON.parse(candidatesStr);
-        for (const c of candidates) {
+      if (matchData.status === 'playing' && pcRef.current) {
+        const pc = pcRef.current;
+        
+        if (role === 'host' && matchData.answer && matchData.answer !== 'undefined' && pc.signalingState === 'have-local-offer') {
           try {
-            await pcRef.current?.addIceCandidate(new RTCIceCandidate(c));
-          } catch (e) {
-            console.error('Error adding ICE candidate', e);
+            await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(matchData.answer)));
+          } catch (e) { console.error('Error setting remote answer:', e); }
+        }
+        
+        if (role === 'client' && matchData.offer && matchData.offer !== 'undefined' && pc.signalingState === 'stable' && !pc.remoteDescription) {
+          try {
+            await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(matchData.offer)));
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            if (answer) {
+              await updateDoc(doc(db, 'matches', matchData.id), { answer: JSON.stringify(answer) });
+            }
+          } catch (e) { console.error('Error handling offer:', e); }
+        }
+
+        // Handle ICE candidates
+        const candidatesStr = role === 'host' ? matchData.guestCandidates : matchData.hostCandidates;
+        if (candidatesStr && pc.remoteDescription) {
+          const candidates = JSON.parse(candidatesStr);
+          for (let i = processedCandidatesRef.current; i < candidates.length; i++) {
+            try {
+              await pc.addIceCandidate(new RTCIceCandidate(candidates[i]));
+            } catch (e) {
+              console.error('Error adding ICE candidate', e);
+            }
           }
+          processedCandidatesRef.current = candidates.length;
         }
       }
     };
 
-    const unsubscribeHost = onSnapshot(qHost, (snapshot) => {
+    const unsubscribeMatches = onSnapshot(qMatches, (snapshot) => {
       snapshot.forEach(doc => handleMatchUpdate({ id: doc.id, ...doc.data() } as Match));
-    });
-    const unsubscribeGuest = onSnapshot(qGuest, (snapshot) => {
-      snapshot.forEach(doc => handleMatchUpdate({ id: doc.id, ...doc.data() } as Match));
+    }, (error) => {
+      console.error("Error listening to matches:", error);
     });
 
     return () => {
       unsubscribeLobby();
-      unsubscribeHost();
-      unsubscribeGuest();
+      unsubscribeMatches();
       if (playerId) {
         deleteDoc(doc(db, 'lobbies', playerId)).catch(console.error);
       }
@@ -142,9 +159,15 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
   }, [playerId]);
 
   const setupWebRTC = async (matchData: Match, role: 'host' | 'client') => {
-    const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+    const configuration = { 
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+      ] 
+    };
     const pc = new RTCPeerConnection(configuration);
     pcRef.current = pc;
+    processedCandidatesRef.current = 0;
 
     const candidates: RTCIceCandidateInit[] = [];
     pc.onicecandidate = async (event) => {
@@ -156,14 +179,17 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
     };
 
     pc.onconnectionstatechange = () => {
+      console.log('Connection state:', pc.connectionState);
       if (pc.connectionState === 'connected') {
         setStatus('Connected!');
+      } else if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+        setStatus('Connection failed. Please refresh.');
       }
     };
 
     if (role === 'host') {
       const dc = pc.createDataChannel('game_sync', { negotiated: true, id: 0 });
-      dc.onopen = () => onMatchStart('host', dc, pc);
+      dc.onopen = () => onMatchStartRef.current('host', dc, pc);
       
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
@@ -172,7 +198,7 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
       }
     } else {
       const dc = pc.createDataChannel('game_sync', { negotiated: true, id: 0 });
-      dc.onopen = () => onMatchStart('client', dc, pc);
+      dc.onopen = () => onMatchStartRef.current('client', dc, pc);
     }
   };
 
@@ -180,14 +206,19 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
     if (!playerId) return;
     soundManager.playClick();
     
-    await setDoc(doc(db, 'lobbies', playerId), { 
-      id: playerId, 
-      name: `Player_${playerId.substring(0, 4)}`,
-      character: selectedCharacter || '?' 
-    });
-    
-    setInQueue(true);
-    setStatus('Waiting in queue...');
+    try {
+      await setDoc(doc(db, 'lobbies', playerId), { 
+        id: playerId, 
+        name: `Player_${playerId.substring(0, 4)}`,
+        character: selectedCharacter || '?' 
+      });
+      
+      setInQueue(true);
+      setStatus('Waiting in queue...');
+    } catch (e) {
+      console.error("Error joining queue:", e);
+      setStatus('Error joining queue. Check console.');
+    }
   };
 
   const handleLeave = async () => {
@@ -203,15 +234,18 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
     soundManager.playClick();
     setStatus('Challenging player...');
     
-    // Create match
-    const matchDocRef = doc(collection(db, 'matches'));
+    // Deterministic match ID prevents duplicate matches if both click FIGHT
+    const matchId = [playerId, targetId].sort().join('_');
+    const isHost = playerId < targetId;
+    
+    const matchDocRef = doc(db, 'matches', matchId);
     await setDoc(matchDocRef, {
-      id: matchDocRef.id,
-      hostId: playerId,
-      guestId: targetId,
+      id: matchId,
+      hostId: isHost ? playerId : targetId,
+      guestId: isHost ? targetId : playerId,
       status: 'preparing',
       createdAt: Date.now()
-    });
+    }, { merge: true });
   };
 
   return (

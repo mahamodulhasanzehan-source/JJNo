@@ -15,9 +15,10 @@ export function updateCombatStats(
   bleedTimer: number,
   brainDamageTimer: number,
   hp: number,
-  bleedDamage: number
+  bleedDamage: number,
+  energyRegenMultiplier: number = 1.0
 ) {
-  let newEnergy = Math.min(ENERGY_MAX, energy + ENERGY_PASSIVE_REGEN * (dt / 1000));
+  let newEnergy = Math.min(ENERGY_MAX, energy + (ENERGY_PASSIVE_REGEN * energyRegenMultiplier) * (dt / 1000));
   let newStaminaPenaltyTimer = staminaPenaltyTimer > 0 ? staminaPenaltyTimer - dt : 0;
   let newPhaseTimer = phaseTimer > 0 ? phaseTimer - dt : 0;
   let newStunTimer = stunTimer > 0 ? stunTimer - dt : 0;
