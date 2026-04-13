@@ -79,7 +79,11 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
         setStatus('Match found! Preparing...');
         setInQueue(false);
         // Remove from lobby
-        await deleteDoc(doc(db, 'lobbies', playerId));
+        try {
+          await deleteDoc(doc(db, 'lobbies', playerId));
+        } catch (e) {
+          console.warn('Failed to delete lobby entry:', e);
+        }
         onPreparingRef.current(matchData, role);
       }
 
@@ -90,20 +94,20 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
       }
 
       // Handle signaling
-      if (role === 'host' && matchData.answer && matchData.answer !== 'undefined' && !pcRef.current?.remoteDescription) {
+      if (role === 'host' && matchData.answer && matchData.answer !== 'undefined' && pcRef.current?.signalingState === 'have-local-offer') {
         try {
-          await pcRef.current?.setRemoteDescription(new RTCSessionDescription(JSON.parse(matchData.answer)));
-        } catch (e) { console.error(e); }
+          await pcRef.current.setRemoteDescription(new RTCSessionDescription(JSON.parse(matchData.answer)));
+        } catch (e) { console.error('Error setting remote answer:', e); }
       }
-      if (role === 'client' && matchData.offer && matchData.offer !== 'undefined' && !pcRef.current?.remoteDescription) {
+      if (role === 'client' && matchData.offer && matchData.offer !== 'undefined' && pcRef.current?.signalingState === 'stable' && !pcRef.current.remoteDescription) {
         try {
-          await pcRef.current?.setRemoteDescription(new RTCSessionDescription(JSON.parse(matchData.offer)));
-          const answer = await pcRef.current?.createAnswer();
-          await pcRef.current?.setLocalDescription(answer);
+          await pcRef.current.setRemoteDescription(new RTCSessionDescription(JSON.parse(matchData.offer)));
+          const answer = await pcRef.current.createAnswer();
+          await pcRef.current.setLocalDescription(answer);
           if (answer) {
             await updateDoc(doc(db, 'matches', matchData.id), { answer: JSON.stringify(answer) });
           }
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error('Error handling offer:', e); }
       }
 
       // Handle ICE candidates

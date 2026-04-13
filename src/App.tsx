@@ -94,9 +94,11 @@ export default function App() {
 function PreparingScreen({ match, role, initialCharacter, onComplete }: { match: any, role: 'host'|'client', initialCharacter: CharacterType | null, onComplete: (char: CharacterType) => void }) {
   const [timeLeft, setTimeLeft] = useState(5);
   const [selected, setSelected] = useState<CharacterType | null>(initialCharacter);
+  const hasCompleted = React.useRef(false);
 
   useEffect(() => {
-    if (timeLeft <= 0) {
+    if (timeLeft <= 0 && !hasCompleted.current) {
+      hasCompleted.current = true;
       let finalChar = selected;
       if (!finalChar) {
         const chars: CharacterType[] = ['Yuji', 'Gojo', 'Sukuna'];
@@ -121,10 +123,12 @@ function PreparingScreen({ match, role, initialCharacter, onComplete }: { match:
       return;
     }
 
-    const timer = setInterval(() => {
-      setTimeLeft(t => t - 1);
-    }, 1000);
-    return () => clearInterval(timer);
+    if (timeLeft > 0) {
+      const timer = setInterval(() => {
+        setTimeLeft(t => t - 1);
+      }, 1000);
+      return () => clearInterval(timer);
+    }
   }, [timeLeft, selected, match.id, role, onComplete]);
 
   return (

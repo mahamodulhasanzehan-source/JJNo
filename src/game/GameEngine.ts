@@ -80,8 +80,8 @@ export class GameEngine {
   constructor(canvas: HTMLCanvasElement, mode: 'single' | 'multi' = 'single', role?: 'host' | 'guest') {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
-    this.input = new InputManager();
-    this.opponentInput = new InputManager();
+    this.input = new InputManager(true);
+    this.opponentInput = new InputManager(false);
     this.mode = mode;
     this.role = role;
     
@@ -234,9 +234,6 @@ export class GameEngine {
       projectiles: this.projectiles.map(p => ({
         pos: p.pos, vel: p.vel, active: p.active, ownerId: p.ownerId, color: p.color, characterType: p.characterType, abilityType: p.abilityType
       })),
-      particles: this.particles.map(p => ({
-        pos: p.pos, vel: p.vel, life: p.life, maxLife: p.maxLife, color: p.color, size: p.size
-      })),
       domain: {
         active: this.domainManager.active, type: this.domainManager.type, ownerId: this.domainManager.ownerId, timer: this.domainManager.timer
       },
@@ -275,7 +272,7 @@ export class GameEngine {
       ? (state.winner === 'player' ? 'abonant' : 'player')
       : state.winner;
     
-    // Reconstruct projectiles and particles simply for visual sync
+    // Reconstruct projectiles simply for visual sync
     this.projectiles = state.projectiles.map((p: any) => {
       const ownerId = this.role === 'guest' 
         ? (p.ownerId === 'player' ? 'abonant' : 'player')
@@ -284,11 +281,6 @@ export class GameEngine {
       proj.active = p.active;
       proj.abilityType = p.abilityType;
       return proj;
-    });
-    this.particles = state.particles.map((p: any) => {
-      const part = new Particle(p.pos.x, p.pos.y, p.vel.x, p.vel.y, p.maxLife, p.color, p.size);
-      part.life = p.life;
-      return part;
     });
   }
 
