@@ -14,7 +14,7 @@ service cloud.firestore {
              request.resource.data.keys().hasAll(['id', 'name', 'character']) &&
              request.resource.data.id is string && request.resource.data.id.size() > 0 &&
              request.resource.data.name is string && request.resource.data.name.size() > 0 &&
-             request.resource.data.character in ['Yuji', 'Gojo', 'Sukuna'];
+             request.resource.data.character in ['Yuji', 'Gojo', 'Sukuna', '?'];
              
       allow delete: if true;
     }
