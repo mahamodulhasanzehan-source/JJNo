@@ -3,7 +3,7 @@ import GameCanvas from './components/GameCanvas';
 import MatchmakingSidebar from './components/MatchmakingSidebar';
 import { CharacterType } from './game/Types';
 import { soundManager } from './game/SoundManager';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, deleteField } from 'firebase/firestore';
 import { db } from './firebase';
 
 export default function App() {
@@ -118,7 +118,13 @@ function PreparingScreen({ match, role, initialCharacter, onComplete }: { match:
         if (role === 'host') {
           // Host transitions to playing after a short delay to ensure both updated
           setTimeout(async () => {
-            await updateDoc(doc(db, 'matches', match.id), { status: 'playing' });
+            await updateDoc(doc(db, 'matches', match.id), { 
+              status: 'playing',
+              offer: deleteField(),
+              answer: deleteField(),
+              hostCandidates: deleteField(),
+              guestCandidates: deleteField()
+            });
           }, 1000);
         }
         

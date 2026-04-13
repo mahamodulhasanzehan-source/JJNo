@@ -8,6 +8,7 @@ interface LobbyEntry {
   id: string;
   name: string;
   character: string;
+  lastSeen?: number;
 }
 
 interface Match {
@@ -59,13 +60,35 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
     setPlayerId(storedId);
   }, []);
 
+  // Heartbeat to keep lobby entry alive
+  useEffect(() => {
+    if (!playerId || !inQueue) return;
+    
+    const interval = setInterval(async () => {
+      try {
+        await updateDoc(doc(db, 'lobbies', playerId), { lastSeen: Date.now() });
+      } catch (e) {
+        // If document doesn't exist, we might have been removed or matched
+      }
+    }, 10000); // Every 10 seconds
+    
+    return () => clearInterval(interval);
+  }, [playerId, inQueue]);
+
   useEffect(() => {
     if (!playerId) return;
 
     const q = query(collection(db, 'lobbies'));
     const unsubscribeLobby = onSnapshot(q, (snapshot) => {
       const entries: LobbyEntry[] = [];
-      snapshot.forEach((doc) => entries.push(doc.data() as LobbyEntry));
+      const now = Date.now();
+      snapshot.forEach((doc) => {
+        const data = doc.data() as LobbyEntry;
+        // Filter out stale entries (older than 30 seconds)
+        if (!data.lastSeen || (now - data.lastSeen < 30000)) {
+          entries.push(data);
+        }
+      });
       setLobby(entries);
     }, (error) => {
       console.error("Error listening to lobbies:", error);
@@ -162,7 +185,10 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
     const configuration = { 
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' }
       ] 
     };
     const pc = new RTCPeerConnection(configuration);
@@ -210,7 +236,8 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
       await setDoc(doc(db, 'lobbies', playerId), { 
         id: playerId, 
         name: `Player_${playerId.substring(0, 4)}`,
-        character: selectedCharacter || '?' 
+        character: selectedCharacter || '?',
+        lastSeen: Date.now()
       });
       
       setInQueue(true);
