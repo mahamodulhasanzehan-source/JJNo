@@ -588,8 +588,8 @@ export class GameEngine {
     }
 
     if (!(isDomainActive && currentDomainType === 'Gojo')) {
-      const playerStats = this.player.update(dt, this.groundY, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Yuji' && currentDomainOwner === this.player.id);
-      const abonantStats = this.abonant.update(dt, this.groundY, this.player, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Sukuna', isDomainActive && currentDomainType === 'Yuji' && currentDomainOwner === this.abonant.id);
+      const playerStats = this.player.update(dt, this.groundY, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Yuji' && currentDomainOwner === this.player.id, isDomainActive && currentDomainType === 'Megumi');
+      const abonantStats = this.abonant.update(dt, this.groundY, this.player, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Sukuna', isDomainActive && currentDomainType === 'Yuji' && currentDomainOwner === this.abonant.id, isDomainActive && currentDomainType === 'Megumi');
 
       // Megumi E Tether Logic
       [this.player, this.abonant].forEach(entity => {
@@ -628,10 +628,11 @@ export class GameEngine {
             targetX: entity.pos.x + entity.width/2 + dir * 400, // Dash distance
             state: 'dashing',
             dashTimer: 300, // 300ms dash
-            lifeTimer: 5000, // 5 seconds
+            lifeTimer: 3000, // 3 seconds
             colorIndex: colorIndex,
             cooldown: 0,
-            hasHitDash: false
+            hasHitDash: false,
+            dashCount: 1
           });
         }
       });
@@ -664,6 +665,10 @@ export class GameEngine {
           }
           
           if (dog.dashTimer <= 0) {
+            if (dog.dashCount >= 2) {
+              this.megumiDogs.splice(i, 1);
+              continue;
+            }
             dog.state = 'idle';
             dog.cooldown = 1000;
           }
@@ -679,6 +684,7 @@ export class GameEngine {
             dog.startX = dog.x;
             dog.targetX = target.pos.x + target.width/2 + (dog.x < target.pos.x ? 250 : -250);
             dog.hasHitDash = false;
+            dog.dashCount++;
           }
         }
       }

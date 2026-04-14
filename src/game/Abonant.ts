@@ -28,7 +28,7 @@ export class Abonant extends Entity {
     this.input = input;
   }
 
-  update(dt: number, groundY: number, player: Player, projectiles: Projectile[], particles: Particle[], triggerShake: () => void, isSukunaDomainActive: boolean = false, isYujiDomainActive: boolean = false) {
+  update(dt: number, groundY: number, player: Player, projectiles: Projectile[], particles: Particle[], triggerShake: () => void, isSukunaDomainActive: boolean = false, isYujiDomainActive: boolean = false, isMegumiDomainActive: boolean = false) {
     const energyRegenMultiplier = (isYujiDomainActive && this.characterType === 'Yuji') ? 1.5 : 1.0;
     const statsResult = this.updateStats(dt, energyRegenMultiplier);
     this.target = player;
@@ -259,7 +259,7 @@ export class Abonant extends Entity {
           
           if (this.characterType === 'Megumi') {
             const activeDogsCount = (this as any).activeDogs || 0;
-            if (activeDogsCount < 2) {
+            if (activeDogsCount < 2 && !isMegumiDomainActive) {
               (this as any).spawnDogQ = true;
               this.phaseTimer = 5 * 16.66; // brief pause for cast
               this.vel.x = 0;
