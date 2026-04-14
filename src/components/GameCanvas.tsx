@@ -7,6 +7,7 @@ import { HUD, EndGameScreen } from '../systems/ui_renderer';
 
 interface GameCanvasProps {
   character: CharacterType;
+  opponentCharacter?: CharacterType;
   networkMatch?: {
     role: 'host' | 'client';
     dc: RTCDataChannel;
@@ -14,7 +15,7 @@ interface GameCanvasProps {
   };
 }
 
-export default function GameCanvas({ character, networkMatch }: GameCanvasProps) {
+export default function GameCanvas({ character, opponentCharacter, networkMatch }: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [engine, setEngine] = useState<GameEngine | null>(null);
   const [gameState, setGameState] = useState({
@@ -34,6 +35,9 @@ export default function GameCanvas({ character, networkMatch }: GameCanvasProps)
     
     const newEngine = new GameEngine(canvas, networkMatch ? 'multi' : 'single', networkMatch ? (networkMatch.role === 'client' ? 'guest' : 'host') : undefined);
     newEngine.player.characterType = character;
+    if (opponentCharacter) {
+      newEngine.abonant.characterType = opponentCharacter;
+    }
     
     if (networkMatch) {
       const dc = networkMatch.dc;

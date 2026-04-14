@@ -9,22 +9,28 @@ import { db } from './firebase';
 export default function App() {
   const [character, setCharacter] = useState<CharacterType | null>(null);
   const [playingLocal, setPlayingLocal] = useState(false);
-  const [networkMatch, setNetworkMatch] = useState<{role: 'host'|'client', dc: RTCDataChannel, pc: RTCPeerConnection} | null>(null);
+  const [networkMatch, setNetworkMatch] = useState<{role: 'host'|'client', dc: RTCDataChannel, pc: RTCPeerConnection, match: any} | null>(null);
   const [preparingMatch, setPreparingMatch] = useState<{match: any, role: 'host'|'client'} | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
 
   if (playingLocal && character) {
     return <GameCanvas character={character} />;
   }
 
   if (networkMatch && character) {
-    return <GameCanvas character={character} networkMatch={networkMatch} />;
+    const opponentCharacter = networkMatch.role === 'host' ? networkMatch.match.guestCharacter : networkMatch.match.hostCharacter;
+    return <GameCanvas character={character} opponentCharacter={opponentCharacter as CharacterType} networkMatch={networkMatch} />;
   }
 
   return (
     <div className="min-h-screen bg-black text-zinc-50 flex font-sans selection:bg-red-500/30 overflow-hidden">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,0,0,0.05)_0%,transparent_100%)] pointer-events-none" />
       
-      {preparingMatch ? (
+      {isConnecting ? (
+        <div className="flex-1 flex flex-col items-center justify-center z-10">
+          <h2 className="text-4xl font-bold text-white animate-pulse">Connecting to peer...</h2>
+        </div>
+      ) : preparingMatch ? (
         <div className="flex-1 z-10">
           <PreparingScreen 
             match={preparingMatch.match} 
@@ -33,6 +39,7 @@ export default function App() {
             onComplete={(finalChar) => {
               setCharacter(finalChar);
               setPreparingMatch(null);
+              setIsConnecting(true);
             }}
           />
         </div>
@@ -80,10 +87,13 @@ export default function App() {
         </div>
       )}
 
-      <div className={`z-20 ${preparingMatch ? 'hidden' : ''}`}>
+      <div className={`z-20 ${preparingMatch || isConnecting ? 'hidden' : ''}`}>
         <MatchmakingSidebar 
           selectedCharacter={character} 
-          onMatchStart={(role, dc, pc) => setNetworkMatch({ role, dc, pc })} 
+          onMatchStart={(role, dc, pc, match) => {
+            setIsConnecting(false);
+            setNetworkMatch({ role, dc, pc, match });
+          }} 
           onPreparing={(match, role) => setPreparingMatch({ match, role })}
         />
       </div>

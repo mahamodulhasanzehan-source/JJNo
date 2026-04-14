@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { collection, onSnapshot, doc, setDoc, deleteDoc, query, where, updateDoc, or } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, deleteDoc, query, where, updateDoc, or, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase';
 import { CharacterType } from '../game/Types';
 import { soundManager } from '../game/SoundManager';
@@ -18,15 +18,15 @@ interface Match {
   status: 'preparing' | 'playing' | 'finished';
   offer?: string;
   answer?: string;
-  hostCandidates?: string;
-  guestCandidates?: string;
+  hostCandidates?: string[] | string;
+  guestCandidates?: string[] | string;
   hostCharacter?: string;
   guestCharacter?: string;
 }
 
 interface MatchmakingSidebarProps {
   selectedCharacter: CharacterType | null;
-  onMatchStart: (role: 'host' | 'client', dataChannel: RTCDataChannel, peerConnection: RTCPeerConnection) => void;
+  onMatchStart: (role: 'host' | 'client', dataChannel: RTCDataChannel, peerConnection: RTCPeerConnection, match: Match) => void;
   onPreparing: (match: Match, role: 'host' | 'client') => void;
 }
 
@@ -151,9 +151,15 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
         }
 
         // Handle ICE candidates
-        const candidatesStr = role === 'host' ? matchData.guestCandidates : matchData.hostCandidates;
-        if (candidatesStr && pc.remoteDescription) {
-          const candidates = JSON.parse(candidatesStr);
+        const candidatesData = role === 'host' ? matchData.guestCandidates : matchData.hostCandidates;
+        if (candidatesData && pc.remoteDescription) {
+          let candidates: any[] = [];
+          if (typeof candidatesData === 'string') {
+            try { candidates = JSON.parse(candidatesData); } catch(e) {}
+          } else if (Array.isArray(candidatesData)) {
+            candidates = candidatesData.map(c => typeof c === 'string' ? JSON.parse(c) : c);
+          }
+          
           for (let i = processedCandidatesRef.current; i < candidates.length; i++) {
             try {
               await pc.addIceCandidate(new RTCIceCandidate(candidates[i]));
@@ -195,12 +201,12 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
     pcRef.current = pc;
     processedCandidatesRef.current = 0;
 
-    const candidates: RTCIceCandidateInit[] = [];
     pc.onicecandidate = async (event) => {
       if (event.candidate) {
-        candidates.push(event.candidate.toJSON());
         const field = role === 'host' ? 'hostCandidates' : 'guestCandidates';
-        await updateDoc(doc(db, 'matches', matchData.id), { [field]: JSON.stringify(candidates) });
+        await updateDoc(doc(db, 'matches', matchData.id), { 
+          [field]: arrayUnion(JSON.stringify(event.candidate.toJSON())) 
+        });
       }
     };
 
@@ -215,7 +221,7 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
 
     if (role === 'host') {
       const dc = pc.createDataChannel('game_sync', { negotiated: true, id: 0 });
-      dc.onopen = () => onMatchStartRef.current('host', dc, pc);
+      dc.onopen = () => onMatchStartRef.current('host', dc, pc, matchData);
       
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
@@ -224,7 +230,7 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
       }
     } else {
       const dc = pc.createDataChannel('game_sync', { negotiated: true, id: 0 });
-      dc.onopen = () => onMatchStartRef.current('client', dc, pc);
+      dc.onopen = () => onMatchStartRef.current('client', dc, pc, matchData);
     }
   };
 
