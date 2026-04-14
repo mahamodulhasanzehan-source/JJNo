@@ -377,7 +377,7 @@ export class GameEngine {
           const dy = target.pos.y + target.height/2 - nue.y;
           const dist = Math.sqrt(dx*dx + dy*dy);
           const speed = 20; // 2x faster projectiles
-          this.projectiles.push(new Projectile(nue.x, nue.y, (dx/dist)*speed, (dy/dist)*speed, owner.id, '#00008b', 'E', 'Megumi'));
+          this.projectiles.push(new Projectile(nue.x, nue.y, (dx/dist)*speed, (dy/dist)*speed, owner.id, '#00008b', 'NUE_BLAST', 'Megumi'));
         }
       });
       
