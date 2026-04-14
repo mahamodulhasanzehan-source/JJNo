@@ -355,11 +355,11 @@ export class GameEngine {
       
       // Nue (Flying)
       this.domainManager.shikigami.nue.forEach((nue, index) => {
-        // Hover above owner
-        const targetX = owner.pos.x + (index === 0 ? -150 : 150);
-        const targetY = owner.pos.y - 200 + Math.sin(Date.now() * 0.005 + index) * 20;
-        nue.x += (targetX - nue.x) * 0.05;
-        nue.y += (targetY - nue.y) * 0.05;
+        // Hover above target loosely, roaming freely
+        const targetX = target.pos.x + (index === 0 ? -200 : 200) + Math.sin(Date.now() * 0.002 + index) * 150;
+        const targetY = target.pos.y - 250 + Math.cos(Date.now() * 0.003 + index) * 80;
+        nue.x += (targetX - nue.x) * 0.03;
+        nue.y += (targetY - nue.y) * 0.03;
         
         nue.timer -= dt;
         if (nue.timer <= 0) {
@@ -377,9 +377,9 @@ export class GameEngine {
         if (dog.cooldown > 0) dog.cooldown -= dt;
         
         if (dog.state === 'idle') {
-          // Follow owner
-          const targetX = owner.pos.x + (index === 0 ? -80 : 80);
-          dog.x += (targetX - dog.x) * 0.1;
+          // Prowl around target loosely instead of sticking to owner
+          const targetX = target.pos.x + (index === 0 ? -150 : 150) + Math.sin(Date.now() * 0.004 + index) * 100;
+          dog.x += (targetX - dog.x) * 0.05;
           dog.y = this.groundY - 40; // Ground level
           
           // Check proximity to target
@@ -388,7 +388,7 @@ export class GameEngine {
             dog.state = 'dashing';
             dog.dashTimer = 300; // 300ms dash
             dog.startX = dog.x;
-            dog.targetX = target.pos.x + target.width/2 + (dog.x < target.pos.x ? 200 : -200); // Dash through
+            dog.targetX = target.pos.x + target.width/2 + (dog.x < target.pos.x ? 250 : -250); // Dash through
           }
         } else if (dog.state === 'dashing') {
           dog.dashTimer -= dt;
@@ -609,32 +609,38 @@ export class GameEngine {
         
         // Megumi Q Snap Dash Logic
         if (anyEntity.megumiDashAnchor) {
-          if (entity.phaseTimer <= 0) {
+          if (anyEntity.megumiDashAnchor.state === 'dashing') {
+            if (entity.phaseTimer <= 0) {
+              anyEntity.megumiDashAnchor.state = 'snapping';
+            }
+          } else if (anyEntity.megumiDashAnchor.state === 'snapping') {
             const startPos = { x: entity.pos.x, y: entity.pos.y };
             const endPos = { x: anyEntity.megumiDashAnchor.x, y: anyEntity.megumiDashAnchor.y };
             
-            // Dash ended, snap back
-            entity.pos.x = endPos.x;
-            entity.pos.y = endPos.y;
-            entity.vel.x = 0;
-            entity.vel.y = 0;
-            anyEntity.megumiDashAnchor = null;
+            const dx = endPos.x - startPos.x;
+            const dy = endPos.y - startPos.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
             
-            // Strike again if enemy is in the snap-back path
-            const target = entity === this.player ? this.abonant : this.player;
-            
-            // Simple AABB check for the path
-            const minX = Math.min(startPos.x, endPos.x);
-            const maxX = Math.max(startPos.x, endPos.x) + entity.width;
-            const minY = Math.min(startPos.y, endPos.y);
-            const maxY = Math.max(startPos.y, endPos.y) + entity.height;
-            
-            const pathRect = { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
-            
-            if (this.checkCollision(pathRect, target.getRect())) {
-              if (target.takeDamage(10, isDomainActive, currentDomainType, currentDomainOwner)) {
-                this.triggerHitSpark(target.pos.x + target.width/2, target.pos.y + target.height/2, entity.color);
-                this.triggerShake(8);
+            if (dist < 20) {
+              // Reached anchor
+              entity.pos.x = endPos.x;
+              entity.pos.y = endPos.y;
+              entity.vel.x = 0;
+              entity.vel.y = 0;
+              anyEntity.megumiDashAnchor = null;
+            } else {
+              // Pull back fast
+              entity.vel.x = (dx / dist) * 40;
+              entity.vel.y = (dy / dist) * 40;
+              
+              // Strike enemy if in path during snap back
+              const target = entity === this.player ? this.abonant : this.player;
+              if (this.checkCollision(entity.getRect(), target.getRect()) && !anyEntity.megumiDashAnchor.hasHitReturn) {
+                if (target.takeDamage(7, isDomainActive, currentDomainType, currentDomainOwner)) { // Reduced damage to 7
+                  this.triggerHitSpark(target.pos.x + target.width/2, target.pos.y + target.height/2, entity.color);
+                  this.triggerShake(8);
+                  anyEntity.megumiDashAnchor.hasHitReturn = true;
+                }
               }
             }
           }
@@ -662,6 +668,7 @@ export class GameEngine {
       const pRect = p.getRect();
       if (p.ownerId !== this.player.id && this.checkCollision(pRect, this.player.getRect())) {
         let damage = p.characterType === 'Sukuna' ? 4 : E_DMG;
+        if (p.characterType === 'Megumi') damage -= 3;
         if (this.player.takeDamage(damage, isDomainActive, this.domainManager.type, this.domainManager.ownerId)) {
           this.abonant.energy += 3; 
           this.applyAbilityEffects(this.player, p.characterType, p.abilityType, this.abonant);
@@ -684,6 +691,7 @@ export class GameEngine {
         }
       } else if (p.ownerId !== this.abonant.id && this.checkCollision(pRect, this.abonant.getRect())) {
         let damage = p.characterType === 'Sukuna' ? 4 : E_DMG;
+        if (p.characterType === 'Megumi') damage -= 3;
         if (p.ownerId === this.player.id && isDomainActive && this.domainManager.type === 'Yuji') {
           damage *= 1.5;
         }
@@ -716,7 +724,8 @@ export class GameEngine {
 
     // Melee Collision (Q Dash)
     if (this.player.phaseTimer > 0 && !this.player.hasHitDash && this.checkCollision(this.player.getRect(), this.abonant.getRect())) {
-      const damage = (isDomainActive && this.domainManager.type === 'Yuji') ? Q_DMG * 1.5 : Q_DMG;
+      let damage = (isDomainActive && this.domainManager.type === 'Yuji') ? Q_DMG * 1.5 : Q_DMG;
+      if (this.player.characterType === 'Megumi') damage -= 3;
       if (this.abonant.takeDamage(damage, isDomainActive, this.domainManager.type, this.domainManager.ownerId)) {
         this.player.energy += 5;
         this.applyAbilityEffects(this.abonant, this.player.characterType, 'Q', this.player);
@@ -727,7 +736,9 @@ export class GameEngine {
       }
     }
     if (this.abonant.phaseTimer > 0 && !this.abonant.hasHitDash && this.checkCollision(this.abonant.getRect(), this.player.getRect())) {
-      if (this.player.takeDamage(Q_DMG, isDomainActive, this.domainManager.type, this.domainManager.ownerId)) {
+      let damage = Q_DMG;
+      if (this.abonant.characterType === 'Megumi') damage -= 3;
+      if (this.player.takeDamage(damage, isDomainActive, this.domainManager.type, this.domainManager.ownerId)) {
         this.abonant.energy += 5;
         this.applyAbilityEffects(this.player, this.abonant.characterType, 'Q', this.abonant);
         this.abonant.hasHitDash = true;
@@ -911,38 +922,66 @@ export class GameEngine {
       // Nue
       this.ctx.fillStyle = '#1e90ff'; // Dodger blue
       this.domainManager.shikigami.nue.forEach(nue => {
+        // Body
         this.ctx.beginPath();
         this.ctx.arc(nue.x - this.camera.x, nue.y - this.camera.y, 15, 0, Math.PI * 2);
         this.ctx.fill();
+        // Mask/Face
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.beginPath();
+        this.ctx.arc(nue.x - this.camera.x, nue.y - this.camera.y + 5, 8, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.fillStyle = '#1e90ff';
+        
         // Wings
         this.ctx.beginPath();
         this.ctx.moveTo(nue.x - this.camera.x, nue.y - this.camera.y);
-        this.ctx.lineTo(nue.x - this.camera.x - 30, nue.y - this.camera.y - 20 + Math.sin(Date.now()*0.01)*10);
-        this.ctx.lineTo(nue.x - this.camera.x - 10, nue.y - this.camera.y + 10);
+        this.ctx.lineTo(nue.x - this.camera.x - 40, nue.y - this.camera.y - 25 + Math.sin(Date.now()*0.01)*15);
+        this.ctx.lineTo(nue.x - this.camera.x - 15, nue.y - this.camera.y + 15);
         this.ctx.fill();
         this.ctx.beginPath();
         this.ctx.moveTo(nue.x - this.camera.x, nue.y - this.camera.y);
-        this.ctx.lineTo(nue.x - this.camera.x + 30, nue.y - this.camera.y - 20 + Math.sin(Date.now()*0.01)*10);
-        this.ctx.lineTo(nue.x - this.camera.x + 10, nue.y - this.camera.y + 10);
+        this.ctx.lineTo(nue.x - this.camera.x + 40, nue.y - this.camera.y - 25 + Math.sin(Date.now()*0.01)*15);
+        this.ctx.lineTo(nue.x - this.camera.x + 15, nue.y - this.camera.y + 15);
         this.ctx.fill();
       });
       
       // Divine Dogs
-      this.ctx.fillStyle = '#f8f8ff'; // Ghost white (White Dog)
       this.domainManager.shikigami.dogs.forEach((dog, index) => {
-        if (index === 1) this.ctx.fillStyle = '#2f4f4f'; // Dark slate gray (Black Dog)
-        this.ctx.fillRect(dog.x - 20 - this.camera.x, dog.y - 30 - this.camera.y, 40, 30);
+        this.ctx.fillStyle = index === 0 ? '#f8f8ff' : '#111111'; // White and Black Dog
+        const target = this.domainManager.ownerId === this.player.id ? this.abonant : this.player;
+        const dir = dog.state === 'dashing' ? (dog.targetX > dog.startX ? 1 : -1) : (dog.x > target.pos.x ? -1 : 1);
+        
+        // Body (longer)
+        this.ctx.fillRect(dog.x - 25 - this.camera.x, dog.y - 25 - this.camera.y, 50, 25);
+        
+        // Head
+        this.ctx.fillRect(dog.x + (dir * 20) - 15 - this.camera.x, dog.y - 40 - this.camera.y, 30, 25);
+        
+        // Snout
+        this.ctx.fillRect(dog.x + (dir * 35) - 10 - this.camera.x, dog.y - 30 - this.camera.y, 20, 15);
+        
         // Ears
         this.ctx.beginPath();
-        this.ctx.moveTo(dog.x - 15 - this.camera.x, dog.y - 30 - this.camera.y);
-        this.ctx.lineTo(dog.x - 20 - this.camera.x, dog.y - 45 - this.camera.y);
-        this.ctx.lineTo(dog.x - 5 - this.camera.x, dog.y - 30 - this.camera.y);
+        this.ctx.moveTo(dog.x + (dir * 10) - this.camera.x, dog.y - 40 - this.camera.y);
+        this.ctx.lineTo(dog.x + (dir * 5) - this.camera.x, dog.y - 55 - this.camera.y);
+        this.ctx.lineTo(dog.x + (dir * 20) - this.camera.x, dog.y - 40 - this.camera.y);
         this.ctx.fill();
+
+        // Legs
+        this.ctx.fillRect(dog.x - 20 - this.camera.x, dog.y - this.camera.y, 10, 15); // Back leg
+        this.ctx.fillRect(dog.x + 10 - this.camera.x, dog.y - this.camera.y, 10, 15); // Front leg
+        
+        // Tail
         this.ctx.beginPath();
-        this.ctx.moveTo(dog.x + 15 - this.camera.x, dog.y - 30 - this.camera.y);
-        this.ctx.lineTo(dog.x + 20 - this.camera.x, dog.y - 45 - this.camera.y);
-        this.ctx.lineTo(dog.x + 5 - this.camera.x, dog.y - 30 - this.camera.y);
+        this.ctx.moveTo(dog.x - (dir * 25) - this.camera.x, dog.y - 20 - this.camera.y);
+        this.ctx.lineTo(dog.x - (dir * 40) - this.camera.x, dog.y - 30 - this.camera.y);
+        this.ctx.lineTo(dog.x - (dir * 25) - this.camera.x, dog.y - 10 - this.camera.y);
         this.ctx.fill();
+        
+        // Eye (red glow)
+        this.ctx.fillStyle = '#ff0000';
+        this.ctx.fillRect(dog.x + (dir * 25) - 2 - this.camera.x, dog.y - 35 - this.camera.y, 4, 4);
       });
       this.ctx.restore();
     }
@@ -951,9 +990,6 @@ export class GameEngine {
     [this.player, this.abonant].forEach(entity => {
       const anyEntity = entity as any;
       if (anyEntity.shadowAnchor) {
-        this.ctx.strokeStyle = 'rgba(10, 10, 10, 0.9)';
-        this.ctx.lineWidth = 3;
-        this.ctx.beginPath();
         const startX = entity.pos.x + entity.width/2 - this.camera.x;
         const startY = entity.pos.y + entity.height/2 - this.camera.y;
         const endX = anyEntity.shadowAnchor.x - this.camera.x;
@@ -962,21 +998,34 @@ export class GameEngine {
         const sag = Math.min(dist * 0.15, 40);
         const midX = (startX + endX) / 2;
         const midY = (startY + endY) / 2 + sag;
+        
+        // Draw jagged/slash-like tether
+        this.ctx.strokeStyle = 'rgba(0, 0, 139, 0.8)'; // Deep blue
+        this.ctx.lineWidth = 4;
+        this.ctx.beginPath();
         this.ctx.moveTo(startX, startY);
         this.ctx.quadraticCurveTo(midX, midY, endX, endY);
+        this.ctx.stroke();
+        
+        this.ctx.strokeStyle = 'rgba(10, 10, 10, 0.9)'; // Black core
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.moveTo(startX, startY);
+        this.ctx.quadraticCurveTo(midX + (Math.random() - 0.5) * 10, midY + (Math.random() - 0.5) * 10, endX, endY);
         this.ctx.stroke();
         
         // Draw anchor point
         this.ctx.fillStyle = '#00008b';
         this.ctx.beginPath();
-        this.ctx.arc(endX, endY, 5, 0, Math.PI*2);
+        this.ctx.arc(endX, endY, 6, 0, Math.PI*2);
+        this.ctx.fill();
+        this.ctx.fillStyle = '#111111';
+        this.ctx.beginPath();
+        this.ctx.arc(endX, endY, 3, 0, Math.PI*2);
         this.ctx.fill();
       }
       
       if (anyEntity.megumiDashAnchor) {
-        this.ctx.strokeStyle = 'rgba(10, 10, 10, 0.9)';
-        this.ctx.lineWidth = 4;
-        this.ctx.beginPath();
         const startX = entity.pos.x + entity.width/2 - this.camera.x;
         const startY = entity.pos.y + entity.height/2 - this.camera.y;
         const endX = anyEntity.megumiDashAnchor.x + entity.width/2 - this.camera.x;
@@ -985,8 +1034,20 @@ export class GameEngine {
         const sag = Math.min(dist * 0.15, 40);
         const midX = (startX + endX) / 2;
         const midY = (startY + endY) / 2 + sag;
+        
+        // Draw jagged/slash-like tether
+        this.ctx.strokeStyle = 'rgba(0, 0, 139, 0.8)'; // Deep blue
+        this.ctx.lineWidth = 5;
+        this.ctx.beginPath();
         this.ctx.moveTo(startX, startY);
         this.ctx.quadraticCurveTo(midX, midY, endX, endY);
+        this.ctx.stroke();
+        
+        this.ctx.strokeStyle = 'rgba(10, 10, 10, 0.9)'; // Black core
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.moveTo(startX, startY);
+        this.ctx.quadraticCurveTo(midX + (Math.random() - 0.5) * 15, midY + (Math.random() - 0.5) * 15, endX, endY);
         this.ctx.stroke();
       }
     });

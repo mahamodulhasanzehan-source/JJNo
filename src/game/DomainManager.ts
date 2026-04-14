@@ -193,12 +193,30 @@ export class DomainManager {
         ctx.fill();
       }
     } else if (this.type === 'Megumi') {
-      // Full-screen blackout
-      ctx.fillStyle = 'rgba(5, 5, 10, 0.95)';
+      // Gray/White corridor theme
+      ctx.fillStyle = '#e0e0e0'; // Light gray background
       ctx.fillRect(0, 0, width, height);
       
+      // Corridor perspective lines
+      ctx.strokeStyle = '#cccccc';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(width / 2, height / 2);
+      ctx.moveTo(width, 0);
+      ctx.lineTo(width / 2, height / 2);
+      ctx.moveTo(0, height);
+      ctx.lineTo(width / 2, height / 2);
+      ctx.moveTo(width, height);
+      ctx.lineTo(width / 2, height / 2);
+      ctx.stroke();
+
+      // Liquid shadow floor overlay
+      ctx.fillStyle = 'rgba(20, 20, 30, 0.4)';
+      ctx.fillRect(0, height / 2, width, height / 2);
+      
       // Signature blue "spinal cord" structure
-      ctx.strokeStyle = 'rgba(0, 0, 139, 0.6)'; // Deep blue
+      ctx.strokeStyle = 'rgba(0, 0, 139, 0.8)'; // Deep blue, slightly more opaque
       ctx.lineWidth = 15;
       ctx.lineCap = 'round';
       

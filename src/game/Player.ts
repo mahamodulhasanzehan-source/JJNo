@@ -79,12 +79,12 @@ export class Player extends Entity {
       this.cooldowns.q = qCooldown;
       this.phaseTimer = 15 * 16.66; // 15 frames
       let dashSpeed = 25;
-      if (this.characterType === 'Gojo') {
+      if (this.characterType === 'Gojo' || this.characterType === 'Megumi') {
         dashSpeed *= 1.25; // 25% farther
       }
       
       if (this.characterType === 'Megumi') {
-        (this as any).megumiDashAnchor = { x: this.pos.x, y: this.pos.y, timer: this.phaseTimer };
+        (this as any).megumiDashAnchor = { x: this.pos.x, y: this.pos.y, timer: this.phaseTimer, state: 'dashing', hasHitReturn: false };
       }
       
       const centerX = this.pos.x + this.width / 2;

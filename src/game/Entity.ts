@@ -176,8 +176,8 @@ export class Entity {
       ctx.fillStyle = '#cc0000';
       ctx.fillRect(x - 2, y + 15, this.width + 4, 10);
     } else if (this.characterType === 'Megumi') {
-      // Spiky black hair
-      ctx.fillStyle = '#111111';
+      // Spiky dark blue-black hair
+      ctx.fillStyle = '#0a1128';
       ctx.beginPath();
       ctx.moveTo(x - 5, y + 15);
       ctx.lineTo(x + 5, y - 20);

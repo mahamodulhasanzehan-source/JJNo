@@ -253,12 +253,12 @@ export class Abonant extends Entity {
           this.cooldowns.q = 1500;
           this.phaseTimer = 15 * 16.66;
           let dashSpeed = 20;
-          if (this.characterType === 'Gojo') {
+          if (this.characterType === 'Gojo' || this.characterType === 'Megumi') {
             dashSpeed *= 1.25;
           }
           
           if (this.characterType === 'Megumi') {
-            (this as any).megumiDashAnchor = { x: this.pos.x, y: this.pos.y, timer: this.phaseTimer };
+            (this as any).megumiDashAnchor = { x: this.pos.x, y: this.pos.y, timer: this.phaseTimer, state: 'dashing', hasHitReturn: false };
           }
           
           this.vel.x = this.facingRight ? dashSpeed : -dashSpeed;
