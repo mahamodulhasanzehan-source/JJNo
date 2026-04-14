@@ -41,6 +41,7 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
   const onPreparingRef = useRef(onPreparing);
   const onMatchStartRef = useRef(onMatchStart);
   const processedCandidatesRef = useRef<number>(0);
+  const isSettingRemoteDescRef = useRef(false);
 
   useEffect(() => {
     onPreparingRef.current = onPreparing;
@@ -127,31 +128,44 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
         matchRef.current = matchData;
         setStatus('Connecting peer...');
         setupWebRTC(matchData, role);
+      } else if (matchData.status === 'playing') {
+        // Always keep ref updated to latest data for async operations
+        matchRef.current = matchData;
       }
 
       // Handle signaling
       if (matchData.status === 'playing' && pcRef.current) {
         const pc = pcRef.current;
         
-        if (role === 'host' && matchData.answer && matchData.answer !== 'undefined' && pc.signalingState === 'have-local-offer') {
+        if (role === 'host' && matchData.answer && matchData.answer !== 'undefined' && pc.signalingState === 'have-local-offer' && !isSettingRemoteDescRef.current) {
+          console.log('Host received answer, setting remote description...');
+          isSettingRemoteDescRef.current = true;
           try {
             await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(matchData.answer)));
+            console.log('Host set remote description successfully.');
           } catch (e) { console.error('Error setting remote answer:', e); }
+          finally { isSettingRemoteDescRef.current = false; }
         }
         
-        if (role === 'client' && matchData.offer && matchData.offer !== 'undefined' && pc.signalingState === 'stable' && !pc.remoteDescription) {
+        if (role === 'client' && matchData.offer && matchData.offer !== 'undefined' && pc.signalingState === 'stable' && !pc.remoteDescription && !isSettingRemoteDescRef.current) {
+          console.log('Client received offer, setting remote description...');
+          isSettingRemoteDescRef.current = true;
           try {
             await pc.setRemoteDescription(new RTCSessionDescription(JSON.parse(matchData.offer)));
+            console.log('Client set remote description successfully. Creating answer...');
             const answer = await pc.createAnswer();
             await pc.setLocalDescription(answer);
+            console.log('Client set local description successfully. Sending answer...');
             if (answer) {
               await updateDoc(doc(db, 'matches', matchData.id), { answer: JSON.stringify(answer) });
             }
           } catch (e) { console.error('Error handling offer:', e); }
+          finally { isSettingRemoteDescRef.current = false; }
         }
 
         // Handle ICE candidates
-        const candidatesData = role === 'host' ? matchData.guestCandidates : matchData.hostCandidates;
+        const latestMatchData = matchRef.current || matchData;
+        const candidatesData = role === 'host' ? latestMatchData.guestCandidates : latestMatchData.hostCandidates;
         if (candidatesData && pc.remoteDescription) {
           let candidates: any[] = [];
           if (typeof candidatesData === 'string') {
@@ -160,14 +174,18 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
             candidates = candidatesData.map(c => typeof c === 'string' ? JSON.parse(c) : c);
           }
           
-          for (let i = processedCandidatesRef.current; i < candidates.length; i++) {
-            try {
-              await pc.addIceCandidate(new RTCIceCandidate(candidates[i]));
-            } catch (e) {
-              console.error('Error adding ICE candidate', e);
+          if (candidates.length > processedCandidatesRef.current) {
+            console.log(`Processing ${candidates.length - processedCandidatesRef.current} new ICE candidates...`);
+            for (let i = processedCandidatesRef.current; i < candidates.length; i++) {
+              try {
+                await pc.addIceCandidate(new RTCIceCandidate(candidates[i]));
+              } catch (e) {
+                console.error('Error adding ICE candidate', e);
+              }
             }
+            processedCandidatesRef.current = candidates.length;
+            console.log('Finished processing ICE candidates.');
           }
-          processedCandidatesRef.current = candidates.length;
         }
       }
     };
@@ -194,19 +212,55 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
         { urls: 'stun:stun1.l.google.com:19302' },
         { urls: 'stun:stun2.l.google.com:19302' },
         { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' }
+        { urls: 'stun:stun4.l.google.com:19302' },
+        {
+          urls: "turn:openrelay.metered.ca:80",
+          username: "openrelayproject",
+          credential: "openrelayproject"
+        },
+        {
+          urls: "turn:openrelay.metered.ca:443",
+          username: "openrelayproject",
+          credential: "openrelayproject"
+        },
+        {
+          urls: "turn:openrelay.metered.ca:443?transport=tcp",
+          username: "openrelayproject",
+          credential: "openrelayproject"
+        }
       ] 
     };
     const pc = new RTCPeerConnection(configuration);
     pcRef.current = pc;
     processedCandidatesRef.current = 0;
+    isSettingRemoteDescRef.current = false;
 
-    pc.onicecandidate = async (event) => {
+    const candidateQueue: any[] = [];
+    let candidateTimeout: any = null;
+
+    pc.onicecandidate = (event) => {
       if (event.candidate) {
-        const field = role === 'host' ? 'hostCandidates' : 'guestCandidates';
-        await updateDoc(doc(db, 'matches', matchData.id), { 
-          [field]: arrayUnion(JSON.stringify(event.candidate.toJSON())) 
-        });
+        candidateQueue.push(event.candidate.toJSON());
+        
+        if (!candidateTimeout) {
+          candidateTimeout = setTimeout(async () => {
+            const candidatesToSend = [...candidateQueue];
+            candidateQueue.length = 0;
+            candidateTimeout = null;
+            
+            if (candidatesToSend.length > 0) {
+              const field = role === 'host' ? 'hostCandidates' : 'guestCandidates';
+              try {
+                const stringifiedCandidates = candidatesToSend.map(c => JSON.stringify(c));
+                await updateDoc(doc(db, 'matches', matchData.id), { 
+                  [field]: arrayUnion(...stringifiedCandidates) 
+                });
+              } catch (e) {
+                console.error('Error sending candidates:', e);
+              }
+            }
+          }, 500);
+        }
       }
     };
 
@@ -221,16 +275,24 @@ export default function MatchmakingSidebar({ selectedCharacter, onMatchStart, on
 
     if (role === 'host') {
       const dc = pc.createDataChannel('game_sync', { negotiated: true, id: 0 });
-      dc.onopen = () => onMatchStartRef.current('host', dc, pc, matchData);
+      dc.onopen = () => {
+        console.log('Data channel opened (host)');
+        onMatchStartRef.current('host', dc, pc, matchData);
+      };
       
+      console.log('Host creating offer...');
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
+      console.log('Host set local description successfully. Sending offer...');
       if (offer) {
         await updateDoc(doc(db, 'matches', matchData.id), { offer: JSON.stringify(offer) });
       }
     } else {
       const dc = pc.createDataChannel('game_sync', { negotiated: true, id: 0 });
-      dc.onopen = () => onMatchStartRef.current('client', dc, pc, matchData);
+      dc.onopen = () => {
+        console.log('Data channel opened (client)');
+        onMatchStartRef.current('client', dc, pc, matchData);
+      };
     }
   };
 
