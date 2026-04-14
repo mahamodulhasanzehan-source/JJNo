@@ -176,7 +176,7 @@ export class Abonant extends Entity {
     if (this.staminaPenaltyTimer > 0) speed *= 0.7;
     if (isSukunaDomainActive) speed *= 0.5; // 50% slow
     if (this.brainDamageTimer > 0) speed *= 0.7; // 30% slow
-    if (this.slowTimer > 0) speed *= 0.85; // 15% slow
+    if (this.slowTimer > 0) speed *= 0.7; // 30% slow
 
     if (isYujiDomainActive) {
       if (this.state === 'ATTACK_Q' || this.state === 'DOMAIN') {

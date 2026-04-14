@@ -391,18 +391,18 @@ export class GameEngine {
           const distToTarget = Math.abs(dog.x - (target.pos.x + target.width/2));
           if (distToTarget < 300 && dog.cooldown <= 0) {
             dog.state = 'dashing';
-            dog.dashTimer = 300; // 300ms dash
+            dog.dashTimer = 600; // 600ms dash
             dog.startX = dog.x;
             dog.targetX = target.pos.x + target.width/2 + (dog.x < target.pos.x ? 250 : -250); // Dash through
           }
         } else if (dog.state === 'dashing') {
           dog.dashTimer -= dt;
-          const progress = 1 - (dog.dashTimer / 300);
+          const progress = 1 - Math.max(0, dog.dashTimer / 600);
           dog.x = dog.startX + (dog.targetX - dog.startX) * progress;
           
           // Check collision with target
           if (Math.abs(dog.x - (target.pos.x + target.width/2)) < 40 && target.phaseTimer <= 0) {
-            if (target.takeDamage(12, true, 'Megumi', owner.id)) { // Adjusted damage to 12 (twice as much)
+            if (target.takeDamage(5, true, 'Megumi', owner.id)) { // 5 damage
               this.triggerHitSpark(target.pos.x + target.width/2, target.pos.y + target.height/2, '#00008b');
               target.phaseTimer = 200; // Brief invuln
             }
@@ -627,7 +627,7 @@ export class GameEngine {
             startX: entity.pos.x + entity.width/2,
             targetX: entity.pos.x + entity.width/2 + dir * 400, // Dash distance
             state: 'dashing',
-            dashTimer: 300, // 300ms dash
+            dashTimer: 600, // 600ms dash
             lifeTimer: 3000, // 3 seconds
             colorIndex: colorIndex,
             cooldown: 0,
@@ -653,13 +653,19 @@ export class GameEngine {
         
         if (dog.state === 'dashing') {
           dog.dashTimer -= dt;
-          const progress = 1 - Math.max(0, dog.dashTimer / 300);
+          const progress = 1 - Math.max(0, dog.dashTimer / 600);
           dog.x = dog.startX + (dog.targetX - dog.startX) * progress;
           
           // Collision with target
           if (!dog.hasHitDash && Math.abs(dog.x - (target.pos.x + target.width/2)) < 40 && target.phaseTimer <= 0) {
-            if (target.takeDamage(12, isDomainActive, currentDomainType, currentDomainOwner)) { // 12 damage
-              this.triggerHitSpark(target.pos.x + target.width/2, target.pos.y + target.height/2, '#00008b');
+            if (dog.dashCount === 1) {
+              if (target.takeDamage(5, isDomainActive, currentDomainType, currentDomainOwner)) { // 5 damage
+                this.triggerHitSpark(target.pos.x + target.width/2, target.pos.y + target.height/2, '#00008b');
+                dog.hasHitDash = true;
+              }
+            } else {
+              target.slowTimer = 1500; // 1.5 second slow
+              this.triggerHitSpark(target.pos.x + target.width/2, target.pos.y + target.height/2, '#4a90e2');
               dog.hasHitDash = true;
             }
           }
@@ -680,7 +686,7 @@ export class GameEngine {
           const distToTarget = Math.abs(dog.x - (target.pos.x + target.width/2));
           if (distToTarget < 300 && dog.cooldown <= 0) {
             dog.state = 'dashing';
-            dog.dashTimer = 300;
+            dog.dashTimer = 600;
             dog.startX = dog.x;
             dog.targetX = target.pos.x + target.width/2 + (dog.x < target.pos.x ? 250 : -250);
             dog.hasHitDash = false;

@@ -120,10 +120,28 @@ export class Entity {
     ctx.globalAlpha = this.phaseTimer > 0 ? 0.5 : 1;
 
     // Base body
-    ctx.fillStyle = this.phaseTimer > 0 ? '#ffffff' : this.color;
-    if (this.characterType === 'Yuji') ctx.fillStyle = '#ff6b6b'; // Light-red hoodie
-    
-    ctx.fillRect(x, y, this.width, this.height);
+    if (this.phaseTimer > 0) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x, y, this.width, this.height);
+    } else {
+      if (this.characterType === 'Megumi' || this.characterType === 'Gojo') {
+        ctx.fillStyle = '#1a237e'; // Dark blue cloth
+        ctx.fillRect(x, y, this.width, this.height);
+      } else if (this.characterType === 'Yuji') {
+        ctx.fillStyle = '#1a237e'; // Dark blue cloth pants/bottom
+        ctx.fillRect(x, y + this.height / 2, this.width, this.height / 2);
+        ctx.fillStyle = '#cc0000'; // Red hoodie top
+        ctx.fillRect(x, y, this.width, this.height / 2);
+      } else if (this.characterType === 'Sukuna') {
+        ctx.fillStyle = '#f5cbba'; // Bare chest (skin color)
+        ctx.fillRect(x, y, this.width, this.height / 2);
+        ctx.fillStyle = '#f8f8ff'; // White pants
+        ctx.fillRect(x, y + this.height / 2, this.width, this.height / 2);
+      } else {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(x, y, this.width, this.height);
+      }
+    }
 
     // Character specific details
     if (this.characterType === 'Gojo') {
@@ -154,16 +172,10 @@ export class Entity {
       ctx.fillRect(x + 5, y + 5, 8, 2);
       ctx.fillRect(x + 27, y + 5, 8, 2);
       ctx.fillRect(x + 10, y + 12, 20, 2);
-      // Kimono collar
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.moveTo(x, y + 20);
-      ctx.lineTo(x + this.width / 2, y + 35);
-      ctx.lineTo(x + this.width, y + 20);
-      ctx.lineTo(x + this.width, y + 25);
-      ctx.lineTo(x + this.width / 2, y + 40);
-      ctx.lineTo(x, y + 25);
-      ctx.fill();
+      
+      // Chest markings
+      ctx.fillRect(x + 10, y + 25, 20, 2);
+      ctx.fillRect(x + 15, y + 30, 10, 2);
     } else if (this.characterType === 'Yuji') {
       // Spiky pink/brown hair instead of a white rectangle
       ctx.fillStyle = '#e68a8a';
