@@ -43,7 +43,7 @@ export class Abonant extends Entity {
       }
     }
 
-    this.executeState(dt, projectiles, particles, triggerShake, isSukunaDomainActive, isYujiDomainActive);
+    this.executeState(dt, projectiles, particles, triggerShake, isSukunaDomainActive, isYujiDomainActive, isMegumiDomainActive);
     this.updatePhysics(dt, groundY);
     return statsResult;
   }
@@ -170,7 +170,7 @@ export class Abonant extends Entity {
     }
   }
 
-  executeState(dt: number, projectiles: Projectile[], particles: Particle[], triggerShake: () => void, isSukunaDomainActive: boolean = false, isYujiDomainActive: boolean = false) {
+  executeState(dt: number, projectiles: Projectile[], particles: Particle[], triggerShake: () => void, isSukunaDomainActive: boolean = false, isYujiDomainActive: boolean = false, isMegumiDomainActive: boolean = false) {
     let speed = 4;
     if (this.characterType === 'Gojo') speed *= 1.1; // Gojo is 10% faster
     if (this.staminaPenaltyTimer > 0) speed *= 0.7;
