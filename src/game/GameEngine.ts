@@ -81,6 +81,8 @@ export class GameEngine {
     color: string;
   }[] = [];
 
+  megumiDogs: any[] = [];
+
   constructor(canvas: HTMLCanvasElement, mode: 'single' | 'multi' = 'single', role?: 'host' | 'guest') {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
@@ -304,6 +306,9 @@ export class GameEngine {
       }
     }
 
+    this.player.activeDogs = this.megumiDogs.filter(d => d.ownerId === this.player.id).length;
+    this.abonant.activeDogs = this.megumiDogs.filter(d => d.ownerId === this.abonant.id).length;
+
     if (this.globalImpactFrameTimer > 0) {
       this.globalImpactFrameTimer -= dt;
     }
@@ -356,18 +361,18 @@ export class GameEngine {
       // Nue (Flying)
       this.domainManager.shikigami.nue.forEach((nue, index) => {
         // Hover above target loosely, roaming freely
-        const targetX = target.pos.x + (index === 0 ? -200 : 200) + Math.sin(Date.now() * 0.002 + index) * 150;
-        const targetY = target.pos.y - 250 + Math.cos(Date.now() * 0.003 + index) * 80;
+        const targetX = target.pos.x + Math.sin(Date.now() * 0.002 + index * Math.PI) * 200;
+        const targetY = target.pos.y - 250 + Math.cos(Date.now() * 0.003 + index * Math.PI) * 80;
         nue.x += (targetX - nue.x) * 0.03;
         nue.y += (targetY - nue.y) * 0.03;
         
         nue.timer -= dt;
         if (nue.timer <= 0) {
-          nue.timer = 2000 + Math.random() * 1000; // Fire every 2-3 seconds
+          nue.timer = 666 + Math.random() * 333; // Fire 3x faster (every 0.66-1 seconds)
           const dx = target.pos.x + target.width/2 - nue.x;
           const dy = target.pos.y + target.height/2 - nue.y;
           const dist = Math.sqrt(dx*dx + dy*dy);
-          const speed = 10; // Slightly slower so it's dodgeable
+          const speed = 20; // 2x faster projectiles
           this.projectiles.push(new Projectile(nue.x, nue.y, (dx/dist)*speed, (dy/dist)*speed, owner.id, '#00008b', 'E', 'Megumi'));
         }
       });
@@ -377,8 +382,8 @@ export class GameEngine {
         if (dog.cooldown > 0) dog.cooldown -= dt;
         
         if (dog.state === 'idle') {
-          // Prowl around target loosely instead of sticking to owner
-          const targetX = target.pos.x + (index === 0 ? -150 : 150) + Math.sin(Date.now() * 0.004 + index) * 100;
+          // Prowl around target loosely, not forced left/right
+          const targetX = target.pos.x + Math.sin(Date.now() * 0.004 + index * Math.PI) * 150;
           dog.x += (targetX - dog.x) * 0.05;
           dog.y = this.groundY - 40; // Ground level
           
@@ -397,7 +402,7 @@ export class GameEngine {
           
           // Check collision with target
           if (Math.abs(dog.x - (target.pos.x + target.width/2)) < 40 && target.phaseTimer <= 0) {
-            if (target.takeDamage(6, true, 'Megumi', owner.id)) { // Adjusted damage to 6
+            if (target.takeDamage(12, true, 'Megumi', owner.id)) { // Adjusted damage to 12 (twice as much)
               this.triggerHitSpark(target.pos.x + target.width/2, target.pos.y + target.height/2, '#00008b');
               target.phaseTimer = 200; // Brief invuln
             }
@@ -607,45 +612,76 @@ export class GameEngine {
           }
         }
         
-        // Megumi Q Snap Dash Logic
-        if (anyEntity.megumiDashAnchor) {
-          if (anyEntity.megumiDashAnchor.state === 'dashing') {
-            if (entity.phaseTimer <= 0) {
-              anyEntity.megumiDashAnchor.state = 'snapping';
-            }
-          } else if (anyEntity.megumiDashAnchor.state === 'snapping') {
-            const startPos = { x: entity.pos.x, y: entity.pos.y };
-            const endPos = { x: anyEntity.megumiDashAnchor.x, y: anyEntity.megumiDashAnchor.y };
-            
-            const dx = endPos.x - startPos.x;
-            const dy = endPos.y - startPos.y;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            
-            if (dist < 20) {
-              // Reached anchor
-              entity.pos.x = endPos.x;
-              entity.pos.y = endPos.y;
-              entity.vel.x = 0;
-              entity.vel.y = 0;
-              anyEntity.megumiDashAnchor = null;
-            } else {
-              // Pull back fast
-              entity.vel.x = (dx / dist) * 40;
-              entity.vel.y = (dy / dist) * 40;
-              
-              // Strike enemy if in path during snap back
-              const target = entity === this.player ? this.abonant : this.player;
-              if (this.checkCollision(entity.getRect(), target.getRect()) && !anyEntity.megumiDashAnchor.hasHitReturn) {
-                if (target.takeDamage(7, isDomainActive, currentDomainType, currentDomainOwner)) { // Reduced damage to 7
-                  this.triggerHitSpark(target.pos.x + target.width/2, target.pos.y + target.height/2, entity.color);
-                  this.triggerShake(8);
-                  anyEntity.megumiDashAnchor.hasHitReturn = true;
-                }
-              }
-            }
-          }
+        // Spawn Megumi Q Dogs
+        if (anyEntity.spawnDogQ) {
+          anyEntity.spawnDogQ = false;
+          const existingColors = this.megumiDogs.filter(d => d.ownerId === entity.id).map(d => d.colorIndex);
+          const colorIndex = existingColors.includes(0) ? 1 : 0; // 0 for white, 1 for black
+          
+          const dir = entity.facingRight ? 1 : -1;
+          
+          this.megumiDogs.push({
+            ownerId: entity.id,
+            x: entity.pos.x + entity.width/2,
+            y: this.groundY - 40,
+            startX: entity.pos.x + entity.width/2,
+            targetX: entity.pos.x + entity.width/2 + dir * 400, // Dash distance
+            state: 'dashing',
+            dashTimer: 300, // 300ms dash
+            lifeTimer: 5000, // 5 seconds
+            colorIndex: colorIndex,
+            cooldown: 0,
+            hasHitDash: false
+          });
         }
       });
+      
+      // Update Megumi Q Dogs
+      for (let i = this.megumiDogs.length - 1; i >= 0; i--) {
+        const dog = this.megumiDogs[i];
+        dog.lifeTimer -= dt;
+        if (dog.lifeTimer <= 0) {
+          this.megumiDogs.splice(i, 1);
+          continue;
+        }
+        
+        const owner = dog.ownerId === this.player.id ? this.player : this.abonant;
+        const target = dog.ownerId === this.player.id ? this.abonant : this.player;
+        
+        if (dog.cooldown > 0) dog.cooldown -= dt;
+        
+        if (dog.state === 'dashing') {
+          dog.dashTimer -= dt;
+          const progress = 1 - Math.max(0, dog.dashTimer / 300);
+          dog.x = dog.startX + (dog.targetX - dog.startX) * progress;
+          
+          // Collision with target
+          if (!dog.hasHitDash && Math.abs(dog.x - (target.pos.x + target.width/2)) < 40 && target.phaseTimer <= 0) {
+            if (target.takeDamage(12, isDomainActive, currentDomainType, currentDomainOwner)) { // 12 damage
+              this.triggerHitSpark(target.pos.x + target.width/2, target.pos.y + target.height/2, '#00008b');
+              dog.hasHitDash = true;
+            }
+          }
+          
+          if (dog.dashTimer <= 0) {
+            dog.state = 'idle';
+            dog.cooldown = 1000;
+          }
+        } else if (dog.state === 'idle') {
+          // Prowl around target
+          const targetX = target.pos.x + Math.sin(Date.now() * 0.004 + dog.colorIndex * Math.PI) * 150;
+          dog.x += (targetX - dog.x) * 0.05;
+          
+          const distToTarget = Math.abs(dog.x - (target.pos.x + target.width/2));
+          if (distToTarget < 300 && dog.cooldown <= 0) {
+            dog.state = 'dashing';
+            dog.dashTimer = 300;
+            dog.startX = dog.x;
+            dog.targetX = target.pos.x + target.width/2 + (dog.x < target.pos.x ? 250 : -250);
+            dog.hasHitDash = false;
+          }
+        }
+      }
 
       if (playerStats?.didSecondaryHit || playerStats?.didBleedHit) {
         this.spawnVisualSlash(this.player.pos.x + this.player.width/2, this.player.pos.y + this.player.height/2, '#ff0000');
@@ -986,6 +1022,46 @@ export class GameEngine {
       this.ctx.restore();
     }
 
+    // Draw Megumi Q Dogs
+    this.megumiDogs.forEach(dog => {
+      this.ctx.save();
+      this.ctx.fillStyle = dog.colorIndex === 0 ? '#f8f8ff' : '#111111'; // White and Black Dog
+      const target = dog.ownerId === this.player.id ? this.abonant : this.player;
+      const dir = dog.state === 'dashing' ? (dog.targetX > dog.startX ? 1 : -1) : (dog.x > target.pos.x ? -1 : 1);
+      
+      // Body (longer)
+      this.ctx.fillRect(dog.x - 25 - this.camera.x, dog.y - 25 - this.camera.y, 50, 25);
+      
+      // Head
+      this.ctx.fillRect(dog.x + (dir * 20) - 15 - this.camera.x, dog.y - 40 - this.camera.y, 30, 25);
+      
+      // Snout
+      this.ctx.fillRect(dog.x + (dir * 35) - 10 - this.camera.x, dog.y - 30 - this.camera.y, 20, 15);
+      
+      // Ears
+      this.ctx.beginPath();
+      this.ctx.moveTo(dog.x + (dir * 10) - this.camera.x, dog.y - 40 - this.camera.y);
+      this.ctx.lineTo(dog.x + (dir * 5) - this.camera.x, dog.y - 55 - this.camera.y);
+      this.ctx.lineTo(dog.x + (dir * 20) - this.camera.x, dog.y - 40 - this.camera.y);
+      this.ctx.fill();
+
+      // Legs
+      this.ctx.fillRect(dog.x - 20 - this.camera.x, dog.y - this.camera.y, 10, 15); // Back leg
+      this.ctx.fillRect(dog.x + 10 - this.camera.x, dog.y - this.camera.y, 10, 15); // Front leg
+      
+      // Tail
+      this.ctx.beginPath();
+      this.ctx.moveTo(dog.x - (dir * 25) - this.camera.x, dog.y - 20 - this.camera.y);
+      this.ctx.lineTo(dog.x - (dir * 40) - this.camera.x, dog.y - 30 - this.camera.y);
+      this.ctx.lineTo(dog.x - (dir * 25) - this.camera.x, dog.y - 10 - this.camera.y);
+      this.ctx.fill();
+      
+      // Eye (red glow)
+      this.ctx.fillStyle = '#ff0000';
+      this.ctx.fillRect(dog.x + (dir * 25) - 2 - this.camera.x, dog.y - 35 - this.camera.y, 4, 4);
+      this.ctx.restore();
+    });
+
     // Draw Megumi Tethers
     [this.player, this.abonant].forEach(entity => {
       const anyEntity = entity as any;
@@ -1023,32 +1099,6 @@ export class GameEngine {
         this.ctx.beginPath();
         this.ctx.arc(endX, endY, 3, 0, Math.PI*2);
         this.ctx.fill();
-      }
-      
-      if (anyEntity.megumiDashAnchor) {
-        const startX = entity.pos.x + entity.width/2 - this.camera.x;
-        const startY = entity.pos.y + entity.height/2 - this.camera.y;
-        const endX = anyEntity.megumiDashAnchor.x + entity.width/2 - this.camera.x;
-        const endY = anyEntity.megumiDashAnchor.y + entity.height/2 - this.camera.y;
-        const dist = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endY - startY, 2));
-        const sag = Math.min(dist * 0.15, 40);
-        const midX = (startX + endX) / 2;
-        const midY = (startY + endY) / 2 + sag;
-        
-        // Draw jagged/slash-like tether
-        this.ctx.strokeStyle = 'rgba(0, 0, 139, 0.8)'; // Deep blue
-        this.ctx.lineWidth = 5;
-        this.ctx.beginPath();
-        this.ctx.moveTo(startX, startY);
-        this.ctx.quadraticCurveTo(midX, midY, endX, endY);
-        this.ctx.stroke();
-        
-        this.ctx.strokeStyle = 'rgba(10, 10, 10, 0.9)'; // Black core
-        this.ctx.lineWidth = 2;
-        this.ctx.beginPath();
-        this.ctx.moveTo(startX, startY);
-        this.ctx.quadraticCurveTo(midX + (Math.random() - 0.5) * 15, midY + (Math.random() - 0.5) * 15, endX, endY);
-        this.ctx.stroke();
       }
     });
 

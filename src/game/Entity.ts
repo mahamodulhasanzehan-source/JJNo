@@ -30,6 +30,9 @@ export class Entity {
   
   hasHitDash: boolean = false;
   
+  activeDogs: number = 0;
+  spawnDogQ: boolean = false;
+  
   characterType: CharacterType;
   color: string;
   

@@ -84,7 +84,14 @@ export class Player extends Entity {
       }
       
       if (this.characterType === 'Megumi') {
-        (this as any).megumiDashAnchor = { x: this.pos.x, y: this.pos.y, timer: this.phaseTimer, state: 'dashing', hasHitReturn: false };
+        const activeDogsCount = (this as any).activeDogs || 0;
+        if (activeDogsCount < 2) {
+          (this as any).spawnDogQ = true;
+          this.phaseTimer = 5 * 16.66; // brief pause for cast
+          this.vel.x = 0;
+          this.vel.y = 0;
+          return;
+        }
       }
       
       const centerX = this.pos.x + this.width / 2;

@@ -125,6 +125,19 @@ function getEndGameText(winner: 'player' | 'abonant', playerChar?: CharacterType
   if (winnerChar === 'Gojo' && loserChar === 'Gojo') return "I AM THE STRONGEST";
   if (winnerChar === 'Sukuna' && loserChar === 'Sukuna') return "TWO KINGS? UNACCEPTABLE";
 
+  if (winnerChar === 'Yuji' && loserChar === 'Megumi') return "GOOD SPAR, FUSHIGURO!";
+  if (winnerChar === 'Megumi' && loserChar === 'Yuji') return "DON'T BE SO RECKLESS, ITADORI.";
+
+  if (winnerChar === 'Gojo' && loserChar === 'Megumi') return "STILL HOLDING BACK, MEGUMI?";
+  if (winnerChar === 'Megumi' && loserChar === 'Gojo') return "I CAN HANDLE MYSELF NOW.";
+
+  if (winnerChar === 'Sukuna' && loserChar === 'Megumi') return "WHAT A WASTE OF POTENTIAL.";
+  if (winnerChar === 'Megumi' && loserChar === 'Sukuna') return "I'LL EXORCISE YOU MYSELF.";
+
+  if (winnerChar === 'Megumi' && loserChar === 'Megumi') {
+    return winner === 'player' ? "I AM THE TRUE HEIR." : "YOU LACK RESOLVE.";
+  }
+
   return winner === 'player' ? "PURIFIED" : "CONSUMED";
 }
 
