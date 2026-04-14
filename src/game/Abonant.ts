@@ -16,12 +16,13 @@ export class Abonant extends Entity {
   input?: InputManager;
 
   constructor(id: string, x: number, y: number, input?: InputManager) {
-    const types: CharacterType[] = ['Gojo', 'Sukuna', 'Yuji'];
+    const types: CharacterType[] = ['Gojo', 'Sukuna', 'Yuji', 'Megumi'];
     const randomType = types[Math.floor(Math.random() * types.length)];
     const colors = {
       'Gojo': '#8a2be2',
       'Sukuna': '#e74c3c',
-      'Yuji': '#ff6b6b'
+      'Yuji': '#ff6b6b',
+      'Megumi': '#00008b'
     };
     super(id, x, y, randomType, colors[randomType]);
     this.input = input;
@@ -133,7 +134,11 @@ export class Abonant extends Entity {
       this.state = 'APPROACH';
     } else if (absDist > 250 && absDist <= 500) {
       // Mid-range
-      if (this.energy >= E_COST && this.cooldowns.e <= 0 && Math.random() > 0.4) {
+      if (this.characterType === 'Megumi' && (this.target as any).shadowAnchor && this.energy >= Q_COST && this.cooldowns.q <= 0) {
+        this.state = 'ATTACK_Q';
+      } else if (this.characterType === 'Megumi' && !(this.target as any).shadowAnchor && this.energy >= E_COST && this.cooldowns.e <= 0) {
+        this.state = 'ATTACK_E'; // Prioritize E to set up anchor
+      } else if (this.energy >= E_COST && this.cooldowns.e <= 0 && Math.random() > 0.4) {
         this.state = 'ATTACK_E';
       } else if (Math.random() > 0.6) {
         this.state = 'BAIT';
@@ -142,7 +147,11 @@ export class Abonant extends Entity {
       }
     } else if (absDist > 100 && absDist <= 250) {
       // Close-mid range
-      if (this.energy >= Q_COST && this.cooldowns.q <= 0 && Math.random() > 0.2) {
+      if (this.characterType === 'Megumi' && (this.target as any).shadowAnchor && this.energy >= Q_COST && this.cooldowns.q <= 0) {
+        this.state = 'ATTACK_Q';
+      } else if (this.characterType === 'Megumi' && !(this.target as any).shadowAnchor && this.energy >= E_COST && this.cooldowns.e <= 0 && Math.random() > 0.3) {
+        this.state = 'ATTACK_E'; // Try to set up anchor even in close-mid
+      } else if (this.energy >= Q_COST && this.cooldowns.q <= 0 && Math.random() > 0.2) {
         this.state = 'ATTACK_Q';
       } else if (this.energy >= E_COST && this.cooldowns.e <= 0 && Math.random() > 0.5) {
         this.state = 'ATTACK_E';
@@ -224,6 +233,7 @@ export class Abonant extends Entity {
           let projColor = '#00ffff';
           if (this.characterType === 'Gojo') projColor = '#8a2be2';
           if (this.characterType === 'Sukuna') projColor = '#ff0000';
+          if (this.characterType === 'Megumi') projColor = '#00008b';
           
           projectiles.push(new Projectile(this.pos.x + (this.facingRight ? this.width : -20), this.pos.y + 20, vx, vy, this.id, projColor, 'E', this.characterType));
           
@@ -245,6 +255,10 @@ export class Abonant extends Entity {
           let dashSpeed = 20;
           if (this.characterType === 'Gojo') {
             dashSpeed *= 1.25;
+          }
+          
+          if (this.characterType === 'Megumi') {
+            (this as any).megumiDashAnchor = { x: this.pos.x, y: this.pos.y, timer: this.phaseTimer };
           }
           
           this.vel.x = this.facingRight ? dashSpeed : -dashSpeed;

@@ -55,7 +55,7 @@ export default function App() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 h-[50vh]">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 h-[50vh]">
               <CharacterCard 
                 name="Yuji" title="The Tiger" color="hover:shadow-[0_0_50px_rgba(255,204,0,0.5)] hover:border-yellow-500" glowColor="bg-yellow-500" stats={{ hp: 200, ce: 100, dmg: 'High', speed: 'Med' }}
                 selected={character === 'Yuji'}
@@ -70,6 +70,11 @@ export default function App() {
                 name="Sukuna" title="King of Curses" color="hover:shadow-[0_0_50px_rgba(255,0,0,0.5)] hover:border-red-500" glowColor="bg-red-500" stats={{ hp: 200, ce: 100, dmg: 'High', speed: 'High' }}
                 selected={character === 'Sukuna'}
                 onClick={() => { soundManager.playClick(); setCharacter('Sukuna'); }}
+              />
+              <CharacterCard 
+                name="Megumi" title="Ten Shadows" color="hover:shadow-[0_0_50px_rgba(0,0,139,0.5)] hover:border-blue-800" glowColor="bg-blue-800" stats={{ hp: 200, ce: 100, dmg: 'Med', speed: 'High' }}
+                selected={character === 'Megumi'}
+                onClick={() => { soundManager.playClick(); setCharacter('Megumi'); }}
               />
             </div>
 
@@ -87,16 +92,19 @@ export default function App() {
         </div>
       )}
 
-      <div className={`z-20 ${preparingMatch || isConnecting ? 'hidden' : ''}`}>
-        <MatchmakingSidebar 
-          selectedCharacter={character} 
-          onMatchStart={(role, dc, pc, match) => {
-            setIsConnecting(false);
-            setNetworkMatch({ role, dc, pc, match });
-          }} 
-          onPreparing={(match, role) => setPreparingMatch({ match, role })}
-        />
-      </div>
+      {/* MULTIPLAYER TEMPORARILY DISABLED */}
+      {false && (
+        <div className={`z-20 ${preparingMatch || isConnecting ? 'hidden' : ''}`}>
+          <MatchmakingSidebar 
+            selectedCharacter={character} 
+            onMatchStart={(role, dc, pc, match) => {
+              setIsConnecting(false);
+              setNetworkMatch({ role, dc, pc, match });
+            }} 
+            onPreparing={(match, role) => setPreparingMatch({ match, role })}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -116,7 +124,7 @@ function PreparingScreen({ match, role, initialCharacter, onComplete }: { match:
       hasCompleted.current = true;
       let finalChar = selected;
       if (!finalChar) {
-        const chars: CharacterType[] = ['Yuji', 'Gojo', 'Sukuna'];
+        const chars: CharacterType[] = ['Yuji', 'Gojo', 'Sukuna', 'Megumi'];
         finalChar = chars[Math.floor(Math.random() * chars.length)];
       }
       
@@ -159,7 +167,7 @@ function PreparingScreen({ match, role, initialCharacter, onComplete }: { match:
       </h1>
       <p className="text-2xl mb-12">Choose your character: <span className="font-bold text-white text-4xl">{timeLeft}</span></p>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 h-[50vh] max-w-6xl w-full">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-8 h-[50vh] max-w-6xl w-full">
         <CharacterCard 
           name="Yuji" title="The Tiger" color="hover:shadow-[0_0_50px_rgba(255,204,0,0.5)] hover:border-yellow-500" glowColor="bg-yellow-500" stats={{ hp: 200, ce: 100, dmg: 'High', speed: 'Med' }}
           selected={selected === 'Yuji'}
@@ -174,6 +182,11 @@ function PreparingScreen({ match, role, initialCharacter, onComplete }: { match:
           name="Sukuna" title="King of Curses" color="hover:shadow-[0_0_50px_rgba(255,0,0,0.5)] hover:border-red-500" glowColor="bg-red-500" stats={{ hp: 200, ce: 100, dmg: 'High', speed: 'High' }}
           selected={selected === 'Sukuna'}
           onClick={() => { soundManager.playClick(); setSelected('Sukuna'); }}
+        />
+        <CharacterCard 
+          name="Megumi" title="Ten Shadows" color="hover:shadow-[0_0_50px_rgba(0,0,139,0.5)] hover:border-blue-800" glowColor="bg-blue-800" stats={{ hp: 200, ce: 100, dmg: 'Med', speed: 'High' }}
+          selected={selected === 'Megumi'}
+          onClick={() => { soundManager.playClick(); setSelected('Megumi'); }}
         />
       </div>
     </div>

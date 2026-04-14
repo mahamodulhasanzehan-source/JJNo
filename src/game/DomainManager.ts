@@ -18,6 +18,12 @@ export class DomainManager {
   sukunaSlashes: { p1: Vector2, p2: Vector2, timer: number }[] = [];
   sukunaSlashRateLimitTimer: number = 0;
   impactFrameTimer: number = 0;
+  
+  // Megumi specific
+  shikigami: {
+    nue: { x: number, y: number, timer: number }[],
+    dogs: { x: number, y: number, state: string, cooldown: number, dashTimer: number, startX: number, targetX: number }[]
+  } | null = null;
 
   activate(ownerId: string, type: CharacterType) {
     this.active = true;
@@ -38,6 +44,19 @@ export class DomainManager {
     } else if (type === 'Yuji') {
       this.timer = 30000;
       this.maxTimer = 30000;
+    } else if (type === 'Megumi') {
+      this.timer = 10000; // 10s duration
+      this.maxTimer = 10000;
+      this.shikigami = {
+        nue: [
+          { x: 0, y: 0, timer: 0 },
+          { x: 0, y: 0, timer: 0 }
+        ],
+        dogs: [
+          { x: 0, y: 0, state: 'idle', cooldown: 0, dashTimer: 0, startX: 0, targetX: 0 },
+          { x: 0, y: 0, state: 'idle', cooldown: 0, dashTimer: 0, startX: 0, targetX: 0 }
+        ]
+      };
     }
   }
 
@@ -172,6 +191,41 @@ export class DomainManager {
         ctx.lineTo(width * 0.5, height);
         ctx.lineTo(width * 0.9, height);
         ctx.fill();
+      }
+    } else if (this.type === 'Megumi') {
+      // Full-screen blackout
+      ctx.fillStyle = 'rgba(5, 5, 10, 0.95)';
+      ctx.fillRect(0, 0, width, height);
+      
+      // Signature blue "spinal cord" structure
+      ctx.strokeStyle = 'rgba(0, 0, 139, 0.6)'; // Deep blue
+      ctx.lineWidth = 15;
+      ctx.lineCap = 'round';
+      
+      const spineX = width / 2 - (camera.x * 0.1); // Slight parallax
+      
+      ctx.beginPath();
+      ctx.moveTo(spineX, 0);
+      // Draw wavy spine
+      for (let y = 0; y < height; y += 40) {
+        const xOffset = Math.sin(y * 0.05 + Date.now() * 0.002) * 20;
+        ctx.lineTo(spineX + xOffset, y);
+      }
+      ctx.stroke();
+      
+      // Draw ribs
+      ctx.lineWidth = 5;
+      for (let y = 50; y < height; y += 60) {
+        const xOffset = Math.sin(y * 0.05 + Date.now() * 0.002) * 20;
+        ctx.beginPath();
+        ctx.moveTo(spineX + xOffset, y);
+        ctx.lineTo(spineX + xOffset - 100, y - 30);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(spineX + xOffset, y);
+        ctx.lineTo(spineX + xOffset + 100, y - 30);
+        ctx.stroke();
       }
     }
     ctx.restore();

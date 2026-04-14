@@ -58,6 +58,7 @@ export class Player extends Entity {
       let projColor = '#00ffff'; // Default Yuji
       if (this.characterType === 'Gojo') projColor = '#8a2be2';
       if (this.characterType === 'Sukuna') projColor = '#ff0000';
+      if (this.characterType === 'Megumi') projColor = '#00008b'; // Deep blue
       
       projectiles.push(new Projectile(centerX, centerY, vx, vy, this.id, projColor, 'E', this.characterType));
       soundManager.playBlast();
@@ -80,6 +81,10 @@ export class Player extends Entity {
       let dashSpeed = 25;
       if (this.characterType === 'Gojo') {
         dashSpeed *= 1.25; // 25% farther
+      }
+      
+      if (this.characterType === 'Megumi') {
+        (this as any).megumiDashAnchor = { x: this.pos.x, y: this.pos.y, timer: this.phaseTimer };
       }
       
       const centerX = this.pos.x + this.width / 2;

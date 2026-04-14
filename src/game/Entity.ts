@@ -175,6 +175,20 @@ export class Entity {
       // Red hood/scarf
       ctx.fillStyle = '#cc0000';
       ctx.fillRect(x - 2, y + 15, this.width + 4, 10);
+    } else if (this.characterType === 'Megumi') {
+      // Spiky black hair
+      ctx.fillStyle = '#111111';
+      ctx.beginPath();
+      ctx.moveTo(x - 5, y + 15);
+      ctx.lineTo(x + 5, y - 20);
+      ctx.lineTo(x + 15, y - 5);
+      ctx.lineTo(x + 25, y - 25);
+      ctx.lineTo(x + 35, y - 10);
+      ctx.lineTo(x + 45, y + 15);
+      ctx.fill();
+      // Tactical uniform collar
+      ctx.fillStyle = '#0a0a2a';
+      ctx.fillRect(x, y + 15, this.width, 10);
     }
 
     ctx.globalAlpha = 1;
