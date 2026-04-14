@@ -208,7 +208,7 @@ function CharacterCard({ name, title, color, glowColor, stats, selected, onClick
     <button 
       onClick={onClick}
       onMouseEnter={() => soundManager.playHover()}
-      className={`group relative flex flex-col justify-end p-6 md:p-8 bg-zinc-950 border transition-all duration-500 text-left flex-1 min-w-[200px] max-w-[280px] h-[350px] md:h-[450px] overflow-hidden ${color} ${selected ? 'border-white shadow-[0_0_30px_rgba(255,255,255,0.2)]' : 'border-zinc-800'}`}
+      className={`group relative flex flex-col items-center justify-end p-4 md:p-6 bg-zinc-950 border transition-all duration-500 flex-1 min-w-[200px] md:min-w-[240px] max-w-[280px] h-[350px] md:h-[450px] overflow-hidden ${color} ${selected ? 'border-white shadow-[0_0_30px_rgba(255,255,255,0.2)]' : 'border-zinc-800'}`}
     >
       {/* Silhouette */}
       <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-500 ${selected ? 'opacity-100' : 'opacity-20 group-hover:opacity-100'}`}>
@@ -216,11 +216,11 @@ function CharacterCard({ name, title, color, glowColor, stats, selected, onClick
         <div className="absolute bottom-0 w-48 h-[80%] bg-black" style={{ clipPath: 'polygon(20% 0%, 80% 0%, 100% 100%, 0% 100%)' }} />
       </div>
 
-      <div className={`relative z-10 transform transition-transform duration-500 ${selected ? 'translate-y-0' : 'translate-y-8 group-hover:translate-y-0'}`}>
-        <h2 className="text-5xl font-black uppercase tracking-tighter mb-1 text-white">{name}</h2>
-        <h3 className="text-sm text-zinc-500 uppercase tracking-[0.2em] mb-6 font-mono">{title}</h3>
+      <div className={`relative z-10 flex flex-col items-center w-full transform transition-transform duration-500 ${selected ? 'translate-y-0' : 'translate-y-8 group-hover:translate-y-0'}`}>
+        <h2 className="text-4xl xl:text-5xl font-black uppercase tracking-tighter mb-1 text-white text-center w-full">{name}</h2>
+        <h3 className="text-xs md:text-sm text-zinc-500 uppercase tracking-[0.2em] mb-6 font-mono text-center">{title}</h3>
         
-        <div className={`grid grid-cols-2 gap-4 transition-opacity duration-500 delay-100 font-mono text-xs ${selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
+        <div className={`grid grid-cols-2 gap-4 w-full max-w-[180px] transition-opacity duration-500 delay-100 font-mono text-xs text-center ${selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
           <div><span className="text-zinc-500 block mb-1">HP</span><span className="text-white">{stats.hp}</span></div>
           <div><span className="text-zinc-500 block mb-1">CE</span><span className="text-white">{stats.ce}</span></div>
           <div><span className="text-zinc-500 block mb-1">DMG</span><span className="text-white">{stats.dmg}</span></div>
