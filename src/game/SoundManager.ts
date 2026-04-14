@@ -167,7 +167,7 @@ export class SoundManager {
       osc.frequency.setValueAtTime(freq, this.ctx!.currentTime + timeOffset);
       
       gain.gain.setValueAtTime(0, this.ctx!.currentTime + timeOffset);
-      gain.gain.linearRampToValueAtTime(0.3, this.ctx!.currentTime + timeOffset + 0.02);
+      gain.gain.linearRampToValueAtTime(0.1, this.ctx!.currentTime + timeOffset + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.01, this.ctx!.currentTime + timeOffset + 1);
       
       osc.connect(gain);
@@ -193,8 +193,8 @@ export class SoundManager {
         osc.frequency.setValueAtTime(400 + Math.random() * 400, this.ctx.currentTime + i * 0.1);
     }
     
-    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(0.1, this.ctx.currentTime + 0.9);
+    gain.gain.setValueAtTime(0.02, this.ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.02, this.ctx.currentTime + 0.9);
     gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 1);
     
     osc.connect(gain);

@@ -44,18 +44,18 @@ export default function App() {
           />
         </div>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center p-8 z-10">
-          <div className="max-w-6xl w-full space-y-16">
+        <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 z-10">
+          <div className="max-w-[1400px] w-full space-y-12 md:space-y-16">
             <div className="text-center space-y-4">
-              <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
+              <h1 className="text-5xl md:text-6xl lg:text-8xl font-black uppercase tracking-tighter text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
                 Cursed Combat
               </h1>
-              <p className="text-zinc-500 text-lg md:text-xl tracking-[0.3em] uppercase font-mono">
+              <p className="text-zinc-500 text-sm md:text-lg lg:text-xl tracking-[0.3em] uppercase font-mono">
                 Select Your Vessel
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 h-[50vh]">
+            <div className="flex flex-wrap justify-center gap-4 md:gap-6 lg:gap-8">
               <CharacterCard 
                 name="Yuji" title="The Tiger" color="hover:shadow-[0_0_50px_rgba(255,204,0,0.5)] hover:border-yellow-500" glowColor="bg-yellow-500" stats={{ hp: 200, ce: 100, dmg: 'High', speed: 'Med' }}
                 selected={character === 'Yuji'}
@@ -172,7 +172,7 @@ function PreparingScreen({ match, role, initialCharacter, onComplete }: { match:
       </h1>
       <p className="text-2xl mb-12">Choose your character: <span className="font-bold text-white text-4xl">{timeLeft}</span></p>
       
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-8 h-[50vh] max-w-6xl w-full">
+      <div className="flex flex-wrap justify-center gap-4 md:gap-6 lg:gap-8 max-w-[1400px] w-full">
         <CharacterCard 
           name="Yuji" title="The Tiger" color="hover:shadow-[0_0_50px_rgba(255,204,0,0.5)] hover:border-yellow-500" glowColor="bg-yellow-500" stats={{ hp: 200, ce: 100, dmg: 'High', speed: 'Med' }}
           selected={selected === 'Yuji'}
@@ -208,7 +208,7 @@ function CharacterCard({ name, title, color, glowColor, stats, selected, onClick
     <button 
       onClick={onClick}
       onMouseEnter={() => soundManager.playHover()}
-      className={`group relative flex flex-col justify-end p-8 bg-zinc-950 border transition-all duration-500 text-left w-full h-full overflow-hidden ${color} ${selected ? 'border-white shadow-[0_0_30px_rgba(255,255,255,0.2)]' : 'border-zinc-800'}`}
+      className={`group relative flex flex-col justify-end p-6 md:p-8 bg-zinc-950 border transition-all duration-500 text-left flex-1 min-w-[200px] max-w-[280px] h-[350px] md:h-[450px] overflow-hidden ${color} ${selected ? 'border-white shadow-[0_0_30px_rgba(255,255,255,0.2)]' : 'border-zinc-800'}`}
     >
       {/* Silhouette */}
       <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-500 ${selected ? 'opacity-100' : 'opacity-20 group-hover:opacity-100'}`}>

@@ -30,6 +30,7 @@ export class DomainManager {
   // Hakari specific
   hakariState: 'rolling' | 'jackpot' | null = null;
   hakariRollTimer: number = 0;
+  hakariShowTimer: number = 0;
   hakariBuff: 'infinite_ce' | 'invulnerable' | 'mimicry' | null = null;
   hakariMimicTarget: CharacterType | null = null;
 
@@ -68,8 +69,8 @@ export class DomainManager {
     } else if (type === 'Hakari') {
       this.hakariState = 'rolling';
       this.hakariRollTimer = 3000; // 3 seconds roll
-      this.timer = 3000; // Will be extended upon jackpot
-      this.maxTimer = 3000;
+      this.timer = 5000; // 5 seconds total (3s roll + 2s show)
+      this.maxTimer = 5000;
     }
   }
 
@@ -109,25 +110,22 @@ export class DomainManager {
     } else if (this.type === 'Hakari') {
       if (this.hakariState === 'rolling') {
         this.hakariRollTimer -= dt;
-        if (Math.random() > 0.9) soundManager.playSlotRoll();
+        if (Math.random() > 0.95) soundManager.playSlotRoll();
         if (this.hakariRollTimer <= 0) {
           this.hakariState = 'jackpot';
+          this.hakariShowTimer = 2000;
           soundManager.playJackpot();
           const roll = Math.random();
           if (roll < 0.33) {
             this.hakariBuff = 'infinite_ce';
-            this.timer = 10000;
-            this.maxTimer = 10000;
           } else if (roll < 0.66) {
             this.hakariBuff = 'invulnerable';
-            this.timer = 15000;
-            this.maxTimer = 15000;
           } else {
             this.hakariBuff = 'mimicry';
-            this.timer = 999999; // Infinite
-            this.maxTimer = 999999;
           }
         }
+      } else if (this.hakariState === 'jackpot') {
+        this.hakariShowTimer -= dt;
       }
     }
   }
@@ -297,13 +295,18 @@ export class DomainManager {
       }
       
       // Slot machine UI overlay
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
-      ctx.fillRect(width / 2 - 150, 50, 300, 100);
+      const slotWidth = 800;
+      const slotHeight = 250;
+      const slotX = width / 2 - slotWidth / 2;
+      const slotY = height / 2 - slotHeight / 2;
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+      ctx.fillRect(slotX, slotY, slotWidth, slotHeight);
       ctx.strokeStyle = '#ff1493';
-      ctx.lineWidth = 4;
-      ctx.strokeRect(width / 2 - 150, 50, 300, 100);
+      ctx.lineWidth = 8;
+      ctx.strokeRect(slotX, slotY, slotWidth, slotHeight);
       
-      ctx.font = 'bold 40px monospace';
+      ctx.font = 'bold 80px monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       
@@ -314,14 +317,14 @@ export class DomainManager {
         const s3 = symbols[Math.floor(Date.now() / 150) % symbols.length];
         
         ctx.fillStyle = Math.random() > 0.5 ? '#00ffff' : '#ffff00';
-        ctx.fillText(`${s1} | ${s2} | ${s3}`, width / 2, 100);
+        ctx.fillText(`${s1} | ${s2} | ${s3}`, width / 2, height / 2);
       } else if (this.hakariState === 'jackpot') {
         ctx.fillStyle = '#00ff00';
         let text = "JACKPOT!";
         if (this.hakariBuff === 'infinite_ce') text = "INFINITE CE!";
         if (this.hakariBuff === 'invulnerable') text = "INVULNERABLE!";
         if (this.hakariBuff === 'mimicry') text = "MIMICRY!";
-        ctx.fillText(text, width / 2, 100);
+        ctx.fillText(text, width / 2, height / 2);
       }
     }
     ctx.restore();

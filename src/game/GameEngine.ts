@@ -437,31 +437,20 @@ export class GameEngine {
 
     // Hakari Domain Logic
     if (isDomainActive && currentDomainType === 'Hakari') {
-      if (this.domainManager.hakariState === 'rolling') {
-        // Freeze both players
-        return;
-      } else if (this.domainManager.hakariState === 'jackpot') {
+      if (this.domainManager.hakariState === 'jackpot') {
         const owner = currentDomainOwner === this.player.id ? this.player : this.abonant;
         const target = currentDomainOwner === this.player.id ? this.abonant : this.player;
         
         if (this.domainManager.hakariBuff === 'infinite_ce') {
-          owner.infiniteCeTimer = 100; // Keep refreshing while domain is active
+          owner.infiniteCeTimer = 10000; // 10s
         } else if (this.domainManager.hakariBuff === 'invulnerable') {
-          owner.invulnerableTimer = 100;
+          owner.invulnerableTimer = 15000; // 15s
         } else if (this.domainManager.hakariBuff === 'mimicry') {
           owner.mimicryTarget = target.characterType;
+          owner.color = target.color;
           target.qDisabled = true;
         }
       }
-    } else {
-      // Clear Hakari buffs if domain ends, except mimicry which is infinite
-      [this.player, this.abonant].forEach(entity => {
-        if (entity.characterType === 'Hakari') {
-          if (this.domainManager.hakariBuff !== 'mimicry') {
-             // Mimicry is infinite, others end when domain ends
-          }
-        }
-      });
     }
 
     // Dash Trails
@@ -623,7 +612,9 @@ export class GameEngine {
       );
     }
 
-    if (!(isDomainActive && currentDomainType === 'Gojo') && !(isDomainActive && currentDomainType === 'Hakari' && this.domainManager.hakariState === 'rolling')) {
+    const isHakariFrozen = isDomainActive && currentDomainType === 'Hakari' && (this.domainManager.hakariState === 'rolling' || this.domainManager.hakariState === 'jackpot');
+
+    if (!(isDomainActive && currentDomainType === 'Gojo') && !isHakariFrozen) {
       const playerStats = this.player.update(dt, this.groundY, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Yuji' && currentDomainOwner === this.player.id, isDomainActive && currentDomainType === 'Megumi');
       const abonantStats = this.abonant.update(dt, this.groundY, this.player, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Sukuna', isDomainActive && currentDomainType === 'Yuji' && currentDomainOwner === this.abonant.id, isDomainActive && currentDomainType === 'Megumi');
 
@@ -661,6 +652,21 @@ export class GameEngine {
             // Strong pull towards the tether point
             entity.vel.x += (dx / dist) * 2.5;
             entity.vel.y += (dy / dist) * 2.5;
+          }
+        }
+
+        // Hakari Q Shadow Anchor Logic
+        if (anyEntity.shadowAnchor) {
+          anyEntity.shadowAnchor.timer -= dt;
+          const dx = anyEntity.shadowAnchor.x - entity.pos.x;
+          const dy = anyEntity.shadowAnchor.y - entity.pos.y;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          
+          if (anyEntity.shadowAnchor.timer <= 0) {
+            anyEntity.shadowAnchor = null;
+          } else if (dist > 100) { // Rubber band effect if they go too far
+            entity.vel.x += (dx / dist) * 3.0;
+            entity.vel.y += (dy / dist) * 3.0;
           }
         }
       });
@@ -1090,6 +1096,26 @@ export class GameEngine {
         
         // Draw anchor point
         this.ctx.fillStyle = '#ffffff';
+        this.ctx.beginPath();
+        this.ctx.arc(endX, endY, 5, 0, Math.PI*2);
+        this.ctx.fill();
+      }
+
+      if (anyEntity.shadowAnchor) {
+        const startX = entity.pos.x + entity.width/2 - this.camera.x;
+        const startY = entity.pos.y + entity.height/2 - this.camera.y;
+        const endX = anyEntity.shadowAnchor.x - this.camera.x;
+        const endY = anyEntity.shadowAnchor.y - this.camera.y;
+        
+        this.ctx.strokeStyle = 'rgba(0, 255, 255, 0.8)'; // Cyan band for Hakari Q
+        this.ctx.lineWidth = 3;
+        this.ctx.beginPath();
+        this.ctx.moveTo(startX, startY);
+        this.ctx.lineTo(endX, endY);
+        this.ctx.stroke();
+        
+        // Draw anchor point
+        this.ctx.fillStyle = '#00ffff';
         this.ctx.beginPath();
         this.ctx.arc(endX, endY, 5, 0, Math.PI*2);
         this.ctx.fill();
