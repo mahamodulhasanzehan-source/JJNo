@@ -418,6 +418,21 @@ export class GameEngine {
           }
         }
       });
+      
+      // Max Elephant Drop
+      this.domainManager.shikigami.elephantTimer -= dt;
+      if (this.domainManager.shikigami.elephantTimer <= 0) {
+        this.domainManager.shikigami.elephantTimer = 4000;
+        
+        // Spawn Elephant Projectile
+        this.projectiles.push(new Projectile(
+          target.pos.x + target.width/2 - 50, 
+          this.camera.y - 200, // Drop from top of screen
+          0, 25, // Fall straight down fast
+          owner.id, '#4682b4', 'ELEPHANT', 'Megumi',
+          15, 80, 'elephant' // 15 bonus damage, 80 size
+        ));
+      }
     }
 
     // Domain Activation Burst
@@ -709,14 +724,55 @@ export class GameEngine {
       const p = this.projectiles[i];
       p.update(dt, this.particles);
       
+      // Blue Pull Logic
+      if ((p.characterType === 'Gojo' && p.abilityType === 'E') || (p.characterType === 'Hakari' && p.variant === 'pull')) {
+        const target = p.ownerId === this.player.id ? this.abonant : this.player;
+        const dx = p.pos.x + p.width/2 - (target.pos.x + target.width/2);
+        const dy = p.pos.y + p.height/2 - (target.pos.y + target.height/2);
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        
+        if (dist < 250) { // Pull radius
+          const pullStrength = 1.5;
+          target.vel.x += (dx / dist) * pullStrength;
+          target.vel.y += (dy / dist) * pullStrength;
+          
+          // Visual pull effect
+          if (Math.random() > 0.7) {
+            this.particles.push(new Particle(target.pos.x + target.width/2, target.pos.y + target.height/2, (dx/dist)*5, (dy/dist)*5, 200, p.color, 3));
+          }
+        }
+      }
+      
+      // Elephant Ground Collision
+      if (p.variant === 'elephant' && p.pos.y + p.height > this.groundY) {
+        p.active = false;
+        this.triggerHitSpark(p.pos.x + p.width/2, this.groundY, p.color);
+        this.triggerShake(15);
+        
+        const target = p.ownerId === this.player.id ? this.abonant : this.player;
+        const dist = Math.abs((p.pos.x + p.width/2) - (target.pos.x + target.width/2));
+        if (dist < 150) {
+          target.takeDamage(15, isDomainActive, currentDomainType, currentDomainOwner);
+          target.stunTimer = 500;
+        }
+      }
+      
       // Collision with entities
       const pRect = p.getRect();
       if (p.ownerId !== this.player.id && this.checkCollision(pRect, this.player.getRect())) {
-        let damage = p.characterType === 'Sukuna' ? 4 : E_DMG;
+        let damage = p.characterType === 'Sukuna' ? 4 + p.damageOverride : E_DMG + p.damageOverride;
         if (p.characterType === 'Megumi') damage -= 3;
+        if (p.variant === 'elephant') damage = 15;
+        
         if (this.player.takeDamage(damage, isDomainActive, this.domainManager.type, this.domainManager.ownerId)) {
           this.abonant.energy += 3; 
-          this.applyAbilityEffects(this.player, p.characterType, p.abilityType, this.abonant);
+          
+          if (p.variant === 'elephant') {
+            this.player.stunTimer = 500;
+            this.triggerShake(15);
+          } else {
+            this.applyAbilityEffects(this.player, p.characterType, p.abilityType, this.abonant);
+          }
           
           // Yuji Knockback (2x)
           if (p.characterType === 'Yuji') {
@@ -726,8 +782,7 @@ export class GameEngine {
           }
           
           // Hakari E Knockback
-          if ((this.player as any).hakariEKnockback) {
-            (this.player as any).hakariEKnockback = false;
+          if (p.characterType === 'Hakari' && p.variant === 'knockback') {
             this.player.vel.y = -10;
             this.player.vel.x = p.vel.x > 0 ? 45 : -45;
             this.triggerHitSpark(p.pos.x, p.pos.y, '#ff1493');
@@ -743,14 +798,22 @@ export class GameEngine {
           p.active = false;
         }
       } else if (p.ownerId !== this.abonant.id && this.checkCollision(pRect, this.abonant.getRect())) {
-        let damage = p.characterType === 'Sukuna' ? 4 : E_DMG;
+        let damage = p.characterType === 'Sukuna' ? 4 + p.damageOverride : E_DMG + p.damageOverride;
         if (p.characterType === 'Megumi') damage -= 3;
+        if (p.variant === 'elephant') damage = 15;
+        
         if (p.ownerId === this.player.id && isDomainActive && this.domainManager.type === 'Yuji') {
           damage *= 1.5;
         }
         if (this.abonant.takeDamage(damage, isDomainActive, this.domainManager.type, this.domainManager.ownerId)) {
           this.player.energy += 3;
-          this.applyAbilityEffects(this.abonant, p.characterType, p.abilityType, this.player);
+          
+          if (p.variant === 'elephant') {
+            this.abonant.stunTimer = 500;
+            this.triggerShake(15);
+          } else {
+            this.applyAbilityEffects(this.abonant, p.characterType, p.abilityType, this.player);
+          }
           
           // Yuji Knockback (2x)
           if (p.characterType === 'Yuji') {
@@ -760,8 +823,7 @@ export class GameEngine {
           }
 
           // Hakari E Knockback
-          if ((this.abonant as any).hakariEKnockback) {
-            (this.abonant as any).hakariEKnockback = false;
+          if (p.characterType === 'Hakari' && p.variant === 'knockback') {
             this.abonant.vel.y = -10;
             this.abonant.vel.x = p.vel.x > 0 ? 45 : -45;
             this.triggerHitSpark(p.pos.x, p.pos.y, '#ff1493');
@@ -990,7 +1052,41 @@ export class GameEngine {
 
     this.ctx.restore();
     
-    for (const p of this.projectiles) p.draw(this.ctx, this.camera);
+    for (const p of this.projectiles) {
+      if (p.variant === 'elephant') {
+        const x = p.pos.x - this.camera.x;
+        const y = p.pos.y - this.camera.y;
+        this.ctx.fillStyle = '#4682b4'; // Steel blue
+        this.ctx.fillRect(x, y, p.width, p.height);
+        // Details
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.fillRect(x - 10, y + p.height - 20, 15, 5); // Tusk L
+        this.ctx.fillRect(x + p.width - 5, y + p.height - 20, 15, 5); // Tusk R
+        this.ctx.fillStyle = '#2f4f4f';
+        this.ctx.fillRect(x + p.width/2 - 10, y + p.height, 20, 40); // Trunk
+      } else if (p.variant === 'fuga') {
+        const x = p.pos.x - this.camera.x;
+        const y = p.pos.y - this.camera.y;
+        this.ctx.fillStyle = '#ff4500';
+        this.ctx.beginPath();
+        if (p.vel.x > 0) {
+          this.ctx.moveTo(x, y + p.height/2);
+          this.ctx.lineTo(x + p.width, y);
+          this.ctx.lineTo(x + p.width, y + p.height);
+        } else {
+          this.ctx.moveTo(x + p.width, y + p.height/2);
+          this.ctx.lineTo(x, y);
+          this.ctx.lineTo(x, y + p.height);
+        }
+        this.ctx.fill();
+        
+        if (Math.random() > 0.2) {
+          this.particles.push(new Particle(p.pos.x + Math.random()*p.width, p.pos.y + Math.random()*p.height, (Math.random()-0.5)*2, -Math.random()*2, 300, '#ff8c00', 4));
+        }
+      } else {
+        p.draw(this.ctx, this.camera);
+      }
+    }
     for (const p of this.particles) p.draw(this.ctx, this.camera);
 
     // Draw Megumi Shikigami

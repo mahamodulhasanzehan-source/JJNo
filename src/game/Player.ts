@@ -46,33 +46,65 @@ export class Player extends Entity {
     let baseECooldown = isYujiDomainActive ? 250 : 500;
     if (activeCharacterType === 'Sukuna') baseECooldown *= 0.75; // 25% faster
     
-    if (isKeyDown('e') && this.cooldowns.e <= 0 && this.energy >= E_COST && this.stunTimer <= 0) {
-      this.energy -= E_COST;
-      this.cooldowns.e = baseECooldown;
-      
-      const centerX = this.pos.x + this.width / 2;
-      const centerY = this.pos.y + this.height / 2;
-      
-      let speedMultiplier = activeCharacterType === 'Sukuna' ? 1.5 : 1;
-      const vx = (this.facingRight ? 15 : -15) * speedMultiplier;
-      const vy = 0;
-      
-      let projColor = '#00ffff'; // Default Yuji
-      if (activeCharacterType === 'Gojo') projColor = '#8a2be2';
-      if (activeCharacterType === 'Sukuna') projColor = '#ff0000';
-      if (activeCharacterType === 'Megumi') projColor = '#00008b'; // Deep blue
-      if (activeCharacterType === 'Hakari') projColor = Math.random() > 0.5 ? '#00ffff' : '#ffff00'; // Neon Blue / Yellow
-      
-      projectiles.push(new Projectile(centerX, centerY, vx, vy, this.id, projColor, 'E', activeCharacterType));
-      soundManager.playBlast();
-      
-      // Extra E particles
-      for(let i=0; i<15; i++) {
-        particles.push(new Particle(
-          centerX, centerY,
-          (Math.random() - 0.5) * 15 + vx, (Math.random() - 0.5) * 15 + vy,
-          400, projColor, 6
-        ));
+    if (activeCharacterType === 'Sukuna') {
+      if (isKeyDown('e') && this.cooldowns.e <= 0 && this.energy >= E_COST && this.stunTimer <= 0) {
+        this.eChargeTimer += dt;
+      } else if (!isKeyDown('e') && this.eChargeTimer > 0) {
+        this.energy -= E_COST;
+        this.cooldowns.e = baseECooldown;
+        
+        const chargeTime = this.eChargeTimer;
+        this.eChargeTimer = 0;
+        
+        const isFuga = chargeTime >= 1000;
+        const bonusDamage = Math.floor(chargeTime / 500) * 5;
+        const bonusSize = Math.floor(chargeTime / 500) * 20;
+        
+        const centerX = this.pos.x + this.width / 2;
+        const centerY = this.pos.y + this.height / 2;
+        const vx = (this.facingRight ? 15 : -15) * 1.5;
+        const vy = 0;
+        const projColor = isFuga ? '#ff4500' : '#ff0000';
+        
+        projectiles.push(new Projectile(centerX, centerY, vx, vy, this.id, projColor, 'E', activeCharacterType, bonusDamage, bonusSize, isFuga ? 'fuga' : 'normal'));
+        soundManager.playBlast();
+        
+        for(let i=0; i<15; i++) {
+          particles.push(new Particle(centerX, centerY, (Math.random() - 0.5) * 15 + vx, (Math.random() - 0.5) * 15 + vy, 400, projColor, 6));
+        }
+      }
+    } else {
+      if (isKeyDown('e') && this.cooldowns.e <= 0 && this.energy >= E_COST && this.stunTimer <= 0) {
+        this.energy -= E_COST;
+        this.cooldowns.e = baseECooldown;
+        
+        const centerX = this.pos.x + this.width / 2;
+        const centerY = this.pos.y + this.height / 2;
+        
+        const vx = (this.facingRight ? 15 : -15);
+        const vy = 0;
+        
+        let projColor = '#00ffff'; // Default Yuji
+        let variant = 'normal';
+        if (activeCharacterType === 'Gojo') projColor = '#8a2be2';
+        if (activeCharacterType === 'Megumi') projColor = '#00008b'; // Deep blue
+        if (activeCharacterType === 'Hakari') {
+          const isPull = Math.random() > 0.5;
+          projColor = isPull ? '#00ffff' : '#ffff00'; // Neon Blue / Yellow
+          variant = isPull ? 'pull' : 'knockback';
+        }
+        
+        projectiles.push(new Projectile(centerX, centerY, vx, vy, this.id, projColor, 'E', activeCharacterType, 0, 0, variant));
+        soundManager.playBlast();
+        
+        // Extra E particles
+        for(let i=0; i<15; i++) {
+          particles.push(new Particle(
+            centerX, centerY,
+            (Math.random() - 0.5) * 15 + vx, (Math.random() - 0.5) * 15 + vy,
+            400, projColor, 6
+          ));
+        }
       }
     }
 

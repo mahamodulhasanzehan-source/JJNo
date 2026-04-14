@@ -10,16 +10,24 @@ export class Projectile {
   ownerId: string;
   active: boolean = true;
   color: string;
-  abilityType: 'E' | 'Q';
+  abilityType: string;
   characterType: CharacterType;
+  damageOverride: number;
+  sizeOverride: number;
+  variant: string;
 
-  constructor(x: number, y: number, vx: number, vy: number, ownerId: string, color: string = '#00ffff', abilityType: 'E' | 'Q' = 'E', characterType: CharacterType = 'Yuji') {
+  constructor(x: number, y: number, vx: number, vy: number, ownerId: string, color: string = '#00ffff', abilityType: string = 'E', characterType: CharacterType = 'Yuji', damageOverride: number = 0, sizeOverride: number = 0, variant: string = 'normal') {
     this.pos = { x, y };
     this.vel = { x: vx, y: vy };
+    this.width = 20 + sizeOverride;
+    this.height = 20 + sizeOverride;
     this.ownerId = ownerId;
     this.color = color;
     this.abilityType = abilityType;
     this.characterType = characterType;
+    this.damageOverride = damageOverride;
+    this.sizeOverride = sizeOverride;
+    this.variant = variant;
   }
 
   getRect(): Rect {
@@ -54,7 +62,29 @@ export class Projectile {
     const y = this.pos.y - camera.y;
 
     ctx.save();
-    if (this.characterType === 'Gojo') {
+    if (this.variant === 'elephant') {
+      ctx.fillStyle = '#4682b4'; // Steel blue
+      ctx.fillRect(x, y, this.width, this.height);
+      // Details
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x - 10, y + this.height - 20, 15, 5); // Tusk L
+      ctx.fillRect(x + this.width - 5, y + this.height - 20, 15, 5); // Tusk R
+      ctx.fillStyle = '#2f4f4f';
+      ctx.fillRect(x + this.width/2 - 10, y + this.height, 20, 40); // Trunk
+    } else if (this.variant === 'fuga') {
+      ctx.fillStyle = '#ff4500';
+      ctx.beginPath();
+      if (this.vel.x > 0) {
+        ctx.moveTo(x, y + this.height/2);
+        ctx.lineTo(x + this.width, y);
+        ctx.lineTo(x + this.width, y + this.height);
+      } else {
+        ctx.moveTo(x + this.width, y + this.height/2);
+        ctx.lineTo(x, y);
+        ctx.lineTo(x, y + this.height);
+      }
+      ctx.fill();
+    } else if (this.characterType === 'Gojo') {
       ctx.globalAlpha = 0.6; // 40% transparent
       const grad = ctx.createRadialGradient(x + 10, y + 10, 0, x + 10, y + 10, 15);
       grad.addColorStop(0, '#ffffff');

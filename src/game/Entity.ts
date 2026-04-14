@@ -41,6 +41,9 @@ export class Entity {
   mimicryTarget: CharacterType | null = null;
   qDisabled: boolean = false;
   
+  eChargeTimer: number = 0;
+  aiChargeTarget: number = 0;
+  
   characterType: CharacterType;
   color: string;
   
@@ -267,6 +270,16 @@ export class Entity {
       ctx.fillRect(x + this.width - 10, y + 10, 10, 10);
     } else {
       ctx.fillRect(x, y + 10, 10, 10);
+    }
+
+    // Sukuna Fuga Charge Visual
+    if (this.eChargeTimer > 0 && (this.characterType === 'Sukuna' || this.mimicryTarget === 'Sukuna')) {
+      const chargeRatio = Math.min(this.eChargeTimer / 1000, 1);
+      ctx.beginPath();
+      ctx.arc(x + this.width/2, y + this.height/2, 30 + chargeRatio * 20, 0, Math.PI*2);
+      ctx.strokeStyle = `rgba(255, 69, 0, ${chargeRatio * 0.8})`;
+      ctx.lineWidth = 2 + chargeRatio * 4;
+      ctx.stroke();
     }
   }
 }

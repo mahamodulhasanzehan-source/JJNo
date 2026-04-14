@@ -221,33 +221,62 @@ export class Abonant extends Entity {
         break;
       case 'ATTACK_E':
         const activeCharacterTypeE = this.mimicryTarget || this.characterType;
-        if (this.energy >= E_COST && this.cooldowns.e <= 0) {
-          this.energy -= E_COST;
-          let baseECooldown = 800;
-          if (activeCharacterTypeE === 'Sukuna') baseECooldown *= 0.75;
-          this.cooldowns.e = baseECooldown;
-          
-          let speedMultiplier = activeCharacterTypeE === 'Sukuna' ? 1.5 : 1;
-          let vx = (this.facingRight ? 15 : -15) * speedMultiplier;
-          let vy = 0;
-          
-          let projColor = '#00ffff';
-          if (activeCharacterTypeE === 'Gojo') projColor = '#8a2be2';
-          if (activeCharacterTypeE === 'Sukuna') projColor = '#ff0000';
-          if (activeCharacterTypeE === 'Megumi') projColor = '#00008b';
-          if (activeCharacterTypeE === 'Hakari') projColor = Math.random() > 0.5 ? '#00ffff' : '#ffff00';
-          
-          projectiles.push(new Projectile(this.pos.x + (this.facingRight ? this.width : -20), this.pos.y + 20, vx, vy, this.id, projColor, 'E', activeCharacterTypeE));
-          
-          for(let i=0; i<15; i++) {
-            particles.push(new Particle(
-              this.pos.x + this.width/2, this.pos.y + this.height/2,
-              (Math.random() - 0.5) * 15 + vx, (Math.random() - 0.5) * 15 + vy,
-              400, projColor, 6
-            ));
+        if (activeCharacterTypeE === 'Sukuna') {
+          if (this.eChargeTimer === 0 && this.energy >= E_COST && this.cooldowns.e <= 0) {
+            this.aiChargeTarget = Math.random() * 1500; // Charge up to 1.5s
+            this.eChargeTimer += dt;
+          } else if (this.eChargeTimer > 0) {
+            this.eChargeTimer += dt;
+            if (this.eChargeTimer >= this.aiChargeTarget) {
+              this.energy -= E_COST;
+              this.cooldowns.e = 800 * 0.75;
+              const isFuga = this.eChargeTimer >= 1000;
+              const bonusDamage = Math.floor(this.eChargeTimer / 500) * 5;
+              const bonusSize = Math.floor(this.eChargeTimer / 500) * 20;
+              const vx = (this.facingRight ? 15 : -15) * 1.5;
+              const projColor = isFuga ? '#ff4500' : '#ff0000';
+              projectiles.push(new Projectile(
+                this.pos.x + (this.facingRight ? this.width : -20), this.pos.y + 20, 
+                vx, 0, this.id, projColor, 'E', activeCharacterTypeE,
+                bonusDamage, bonusSize, isFuga ? 'fuga' : 'normal'
+              ));
+              this.eChargeTimer = 0;
+              this.state = 'IDLE';
+            }
+          } else {
+            this.state = 'IDLE';
           }
+        } else {
+          if (this.energy >= E_COST && this.cooldowns.e <= 0) {
+            this.energy -= E_COST;
+            let baseECooldown = 800;
+            this.cooldowns.e = baseECooldown;
+            
+            let vx = (this.facingRight ? 15 : -15);
+            let vy = 0;
+            
+            let projColor = '#00ffff';
+            let variant = 'normal';
+            if (activeCharacterTypeE === 'Gojo') projColor = '#8a2be2';
+            if (activeCharacterTypeE === 'Megumi') projColor = '#00008b';
+            if (activeCharacterTypeE === 'Hakari') {
+              const isPull = Math.random() > 0.5;
+              projColor = isPull ? '#00ffff' : '#ffff00';
+              variant = isPull ? 'pull' : 'knockback';
+            }
+            
+            projectiles.push(new Projectile(this.pos.x + (this.facingRight ? this.width : -20), this.pos.y + 20, vx, vy, this.id, projColor, 'E', activeCharacterTypeE, 0, 0, variant));
+            
+            for(let i=0; i<15; i++) {
+              particles.push(new Particle(
+                this.pos.x + this.width/2, this.pos.y + this.height/2,
+                (Math.random() - 0.5) * 15 + vx, (Math.random() - 0.5) * 15 + vy,
+                400, projColor, 6
+              ));
+            }
+          }
+          this.state = 'IDLE';
         }
-        this.state = 'IDLE';
         break;
       case 'ATTACK_Q':
         const activeCharacterTypeQ = this.mimicryTarget || this.characterType;

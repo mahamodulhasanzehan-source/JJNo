@@ -24,7 +24,8 @@ export class DomainManager {
   // Megumi specific
   shikigami: {
     nue: { x: number, y: number, timer: number }[],
-    dogs: { x: number, y: number, state: string, cooldown: number, dashTimer: number, startX: number, targetX: number }[]
+    dogs: { x: number, y: number, state: string, cooldown: number, dashTimer: number, startX: number, targetX: number }[],
+    elephantTimer: number
   } | null = null;
 
   // Hakari specific
@@ -64,7 +65,8 @@ export class DomainManager {
         dogs: [
           { x: 0, y: 0, state: 'idle', cooldown: 0, dashTimer: 0, startX: 0, targetX: 0 },
           { x: 0, y: 0, state: 'idle', cooldown: 0, dashTimer: 0, startX: 0, targetX: 0 }
-        ]
+        ],
+        elephantTimer: 4000
       };
     } else if (type === 'Hakari') {
       this.hakariState = 'rolling';
