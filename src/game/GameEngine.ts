@@ -43,6 +43,9 @@ export class GameEngine {
   chromaticAberration: number = 0;
   graphicsMode: 'HIGH' | 'LOW' = 'HIGH';
   globalImpactFrameTimer: number = 0;
+  hitStopTimer: number = 0;
+  blackFlashTimer: number = 0;
+  blackFlashPos: Vector2 | null = null;
   
   lastTime: number = 0;
   groundY: number = 500;
@@ -234,6 +237,22 @@ export class GameEngine {
       this.particles.push(new Particle(
         x, y, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20,
         300 + Math.random() * 200, color, 3 + Math.random() * 5
+      ));
+    }
+  }
+
+  triggerBlackFlash(x: number, y: number) {
+    this.hitStopTimer = 150; // 150ms hit stop
+    this.blackFlashTimer = 150;
+    this.blackFlashPos = { x, y };
+    this.triggerShake(30);
+    this.chromaticAberration = 25;
+    
+    const mult = this.graphicsMode === 'HIGH' ? 3 : 0.5;
+    for (let i = 0; i < 50 * mult; i++) {
+      this.particles.push(new Particle(
+        x, y, (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 40,
+        500 + Math.random() * 300, Math.random() > 0.5 ? '#000000' : '#ff0000', 5 + Math.random() * 10
       ));
     }
   }
@@ -732,7 +751,7 @@ export class GameEngine {
         const dist = Math.sqrt(dx*dx + dy*dy);
         
         if (dist < 250) { // Pull radius
-          const pullStrength = 1.5;
+          const pullStrength = 0.375; // 25% of 1.5
           target.vel.x += (dx / dist) * pullStrength;
           target.vel.y += (dy / dist) * pullStrength;
           
@@ -766,6 +785,11 @@ export class GameEngine {
         
         if (this.player.takeDamage(damage, isDomainActive, this.domainManager.type, this.domainManager.ownerId)) {
           this.abonant.energy += 3; 
+          this.abonant.hp = Math.min(this.abonant.maxHp, this.abonant.hp + damage * 0.2); // 20% Lifesteal
+          
+          if (p.characterType === 'Yuji' && p.abilityType === 'E') {
+            this.abonant.yujiEComboTimer = 200; // 200ms window for Black Flash
+          }
           
           if (p.variant === 'elephant') {
             this.player.stunTimer = 500;
@@ -807,6 +831,11 @@ export class GameEngine {
         }
         if (this.abonant.takeDamage(damage, isDomainActive, this.domainManager.type, this.domainManager.ownerId)) {
           this.player.energy += 3;
+          this.player.hp = Math.min(this.player.maxHp, this.player.hp + damage * 0.2); // 20% Lifesteal
+          
+          if (p.characterType === 'Yuji' && p.abilityType === 'E') {
+            this.player.yujiEComboTimer = 200; // 200ms window for Black Flash
+          }
           
           if (p.variant === 'elephant') {
             this.abonant.stunTimer = 500;
@@ -849,9 +878,21 @@ export class GameEngine {
     if (this.player.phaseTimer > 0 && !this.player.hasHitDash && this.checkCollision(this.player.getRect(), this.abonant.getRect())) {
       let damage = (isDomainActive && this.domainManager.type === 'Yuji') ? Q_DMG * 1.5 : Q_DMG;
       if (this.player.characterType === 'Megumi') damage -= 3;
+      
+      let isBlackFlash = false;
+      if (this.player.characterType === 'Yuji' && this.player.yujiEComboTimer > 0) {
+        isBlackFlash = true;
+        damage *= 3;
+      }
+      
       if (this.abonant.takeDamage(damage, isDomainActive, this.domainManager.type, this.domainManager.ownerId)) {
         this.player.energy += 5;
+        this.player.hp = Math.min(this.player.maxHp, this.player.hp + damage * 0.2); // 20% Lifesteal
         this.applyAbilityEffects(this.abonant, this.player.characterType, 'Q', this.player);
+        
+        if (isBlackFlash) {
+          this.triggerBlackFlash(this.abonant.pos.x + this.abonant.width/2, this.abonant.pos.y + this.abonant.height/2);
+        }
         
         // Hakari Q Knockback
         if ((this.abonant as any).hakariQKnockback) {
@@ -862,16 +903,30 @@ export class GameEngine {
         
         this.player.hasHitDash = true;
         this.triggerHitSpark(this.abonant.pos.x + this.abonant.width/2, this.abonant.pos.y + this.abonant.height/2, this.player.color);
-        this.triggerShake(8);
-        this.globalImpactFrameTimer = 50;
+        if (!isBlackFlash) {
+          this.triggerShake(8);
+          this.globalImpactFrameTimer = 50;
+        }
       }
     }
     if (this.abonant.phaseTimer > 0 && !this.abonant.hasHitDash && this.checkCollision(this.abonant.getRect(), this.player.getRect())) {
       let damage = Q_DMG;
       if (this.abonant.characterType === 'Megumi') damage -= 3;
+      
+      let isBlackFlash = false;
+      if (this.abonant.characterType === 'Yuji' && this.abonant.yujiEComboTimer > 0) {
+        isBlackFlash = true;
+        damage *= 3;
+      }
+      
       if (this.player.takeDamage(damage, isDomainActive, this.domainManager.type, this.domainManager.ownerId)) {
         this.abonant.energy += 5;
+        this.abonant.hp = Math.min(this.abonant.maxHp, this.abonant.hp + damage * 0.2); // 20% Lifesteal
         this.applyAbilityEffects(this.player, this.abonant.characterType, 'Q', this.abonant);
+        
+        if (isBlackFlash) {
+          this.triggerBlackFlash(this.player.pos.x + this.player.width/2, this.player.pos.y + this.player.height/2);
+        }
         
         // Hakari Q Knockback
         if ((this.player as any).hakariQKnockback) {
@@ -882,8 +937,10 @@ export class GameEngine {
         
         this.abonant.hasHitDash = true;
         this.triggerHitSpark(this.player.pos.x + this.player.width/2, this.player.pos.y + this.player.height/2, this.abonant.color);
-        this.triggerShake(8);
-        this.globalImpactFrameTimer = 50;
+        if (!isBlackFlash) {
+          this.triggerShake(8);
+          this.globalImpactFrameTimer = 50;
+        }
       }
     }
 
@@ -953,6 +1010,17 @@ export class GameEngine {
       this.ctx.save();
       const colors = ['#000000', '#ffffff'];
       const color = colors[Math.floor(this.globalImpactFrameTimer / 16) % colors.length];
+      this.ctx.fillStyle = color;
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+      this.ctx.restore();
+      return; // Skip rest of drawing for impact frame
+    }
+    
+    // Black Flash Impact Frames
+    if (this.blackFlashTimer > 0) {
+      this.ctx.save();
+      const colors = ['#000000', '#ff0000'];
+      const color = colors[Math.floor(this.blackFlashTimer / 16) % colors.length];
       this.ctx.fillStyle = color;
       this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
       this.ctx.restore();

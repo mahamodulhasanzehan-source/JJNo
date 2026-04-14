@@ -85,7 +85,7 @@ export class Projectile {
       }
       ctx.fill();
     } else if (this.characterType === 'Gojo') {
-      ctx.globalAlpha = 0.6; // 40% transparent
+      ctx.globalAlpha = 0.1; // 90% transparent
       const grad = ctx.createRadialGradient(x + 10, y + 10, 0, x + 10, y + 10, 15);
       grad.addColorStop(0, '#ffffff');
       grad.addColorStop(1, '#8a2be2');
@@ -93,6 +93,7 @@ export class Projectile {
       ctx.beginPath();
       ctx.arc(x + 10, y + 10, 12, 0, Math.PI * 2);
       ctx.fill();
+      ctx.globalAlpha = 1.0;
     } else if (this.characterType === 'Sukuna') {
       ctx.strokeStyle = '#e74c3c';
       ctx.lineWidth = 4;

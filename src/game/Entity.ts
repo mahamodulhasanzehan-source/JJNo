@@ -44,6 +44,8 @@ export class Entity {
   eChargeTimer: number = 0;
   aiChargeTarget: number = 0;
   
+  yujiEComboTimer: number = 0;
+  
   characterType: CharacterType;
   color: string;
   
@@ -118,11 +120,9 @@ export class Entity {
     if (this.invulnerableTimer > 0) {
       this.invulnerableTimer -= dt;
     }
-
-    // HP Regen
-    if (this.hp > 0 && this.hp < this.maxHp) {
-      this.hp += (5 * dt) / 1000;
-      if (this.hp > this.maxHp) this.hp = this.maxHp;
+    
+    if (this.yujiEComboTimer > 0) {
+      this.yujiEComboTimer -= dt;
     }
 
     // Stamina regen (not handled in combat manager to keep it simple, or we can handle it here)
