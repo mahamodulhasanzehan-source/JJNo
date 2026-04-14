@@ -647,11 +647,32 @@ export class GameEngine {
           const dist = Math.sqrt(dx*dx + dy*dy);
           
           if (anyEntity.qTether.timer <= 0 || dist < 30) {
+            anyEntity.qTetherTrap = { x: anyEntity.qTether.x, y: anyEntity.qTether.y, armed: false };
             anyEntity.qTether = null;
           } else {
             // Strong pull towards the tether point
             entity.vel.x += (dx / dist) * 2.5;
             entity.vel.y += (dy / dist) * 2.5;
+          }
+        }
+
+        // Megumi Q Tether Trap Logic
+        if (anyEntity.qTetherTrap) {
+          const dx = anyEntity.qTetherTrap.x - entity.pos.x;
+          const dy = anyEntity.qTetherTrap.y - entity.pos.y;
+          const dist = Math.sqrt(dx*dx + dy*dy);
+          
+          if (!anyEntity.qTetherTrap.armed) {
+            if (dist > 50) {
+              anyEntity.qTetherTrap.armed = true;
+            }
+          } else {
+            if (dist < 30) {
+              if (entity.takeDamage(5, isDomainActive, currentDomainType, currentDomainOwner)) {
+                this.triggerHitSpark(entity.pos.x + entity.width/2, entity.pos.y + entity.height/2, '#00008b');
+              }
+              anyEntity.qTetherTrap = null;
+            }
           }
         }
 
@@ -1099,6 +1120,23 @@ export class GameEngine {
         this.ctx.beginPath();
         this.ctx.arc(endX, endY, 5, 0, Math.PI*2);
         this.ctx.fill();
+      }
+
+      if (anyEntity.qTetherTrap) {
+        const trapX = anyEntity.qTetherTrap.x - this.camera.x;
+        const trapY = anyEntity.qTetherTrap.y - this.camera.y;
+        
+        // Draw trap mark on the ground
+        this.ctx.fillStyle = anyEntity.qTetherTrap.armed ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.2)';
+        this.ctx.beginPath();
+        this.ctx.ellipse(trapX, trapY, 15, 5, 0, 0, Math.PI*2);
+        this.ctx.fill();
+        
+        this.ctx.strokeStyle = '#ffffff';
+        this.ctx.lineWidth = 1;
+        this.ctx.beginPath();
+        this.ctx.ellipse(trapX, trapY, 15, 5, 0, 0, Math.PI*2);
+        this.ctx.stroke();
       }
 
       if (anyEntity.shadowAnchor) {
