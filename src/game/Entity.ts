@@ -30,8 +30,16 @@ export class Entity {
   
   hasHitDash: boolean = false;
   
-  activeDogs: number = 0;
-  spawnDogQ: boolean = false;
+  qDashTimer: number = 0;
+  qDashHit: boolean = false;
+  qDashStartX: number = 0;
+  qDashStartY: number = 0;
+  
+  // Hakari Buffs
+  infiniteCeTimer: number = 0;
+  invulnerableTimer: number = 0;
+  mimicryTarget: CharacterType | null = null;
+  qDisabled: boolean = false;
   
   characterType: CharacterType;
   color: string;
@@ -58,7 +66,14 @@ export class Entity {
   }
 
   takeDamage(amount: number, isDomainActive: boolean = false, domainType: CharacterType | null = null, domainOwnerId: string | null = null) {
-    const finalDamage = calculateDamage(amount, this.phaseTimer, this.characterType, isDomainActive, domainType, domainOwnerId, this.id);
+    let finalDamage = calculateDamage(amount, this.phaseTimer, this.characterType, isDomainActive, domainType, domainOwnerId, this.id);
+    
+    if (this.invulnerableTimer > 0) {
+      finalDamage *= 0.25; // 75% damage reduction
+    } else if (this.infiniteCeTimer > 0) {
+      finalDamage *= 0.93; // 7% damage reduction
+    }
+    
     if (finalDamage === 0 && amount > 0) return false;
     this.hp -= finalDamage;
     return true;
@@ -91,6 +106,15 @@ export class Entity {
     this.hp = result.newHp;
     this.secondaryHitTimer = result.newSecondaryHitTimer;
     this.bleedTimer = result.newBleedTimer;
+    
+    // Hakari Buffs Update
+    if (this.infiniteCeTimer > 0) {
+      this.infiniteCeTimer -= dt;
+      this.energy = ENERGY_MAX;
+    }
+    if (this.invulnerableTimer > 0) {
+      this.invulnerableTimer -= dt;
+    }
 
     // Stamina regen (not handled in combat manager to keep it simple, or we can handle it here)
     if (this.staminaPenaltyTimer <= 0 && !this.isDashing) {
@@ -101,9 +125,10 @@ export class Entity {
     }
 
     // Cooldowns
+    const cdrMultiplier = this.infiniteCeTimer > 0 ? 2.0 : (this.invulnerableTimer > 0 ? 1.33 : 1.0); // 50% CDR = 2x speed, 25% CDR = 1.33x speed
     for (const key in this.cooldowns) {
       if (this.cooldowns[key] > 0) {
-        this.cooldowns[key] -= dt;
+        this.cooldowns[key] -= dt * cdrMultiplier;
       }
     }
 
@@ -204,6 +229,28 @@ export class Entity {
       // Tactical uniform collar
       ctx.fillStyle = '#0a0a2a';
       ctx.fillRect(x, y + 15, this.width, 10);
+    } else if (this.characterType === 'Hakari') {
+      // Blonde hair
+      ctx.fillStyle = '#f1c40f';
+      ctx.beginPath();
+      ctx.moveTo(x - 5, y + 10);
+      ctx.lineTo(x + 10, y - 15);
+      ctx.lineTo(x + 20, y - 5);
+      ctx.lineTo(x + 30, y - 15);
+      ctx.lineTo(x + 45, y + 10);
+      ctx.fill();
+      
+      // Jacket
+      ctx.fillStyle = '#2c3e50';
+      ctx.fillRect(x - 2, y + 15, this.width + 4, 30);
+      
+      // Mimicry indicator
+      if (this.mimicryTarget) {
+        ctx.fillStyle = '#ff1493';
+        ctx.font = '10px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('MIMIC', x + this.width / 2, y - 25);
+      }
     }
 
     ctx.globalAlpha = 1;

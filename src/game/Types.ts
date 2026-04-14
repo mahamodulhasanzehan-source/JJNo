@@ -1,4 +1,4 @@
-export type CharacterType = 'Gojo' | 'Sukuna' | 'Yuji' | 'Megumi';
+export type CharacterType = 'Gojo' | 'Sukuna' | 'Yuji' | 'Megumi' | 'Hakari';
 
 export interface Vector2 {
   x: number;

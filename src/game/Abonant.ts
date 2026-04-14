@@ -220,22 +220,24 @@ export class Abonant extends Entity {
         }
         break;
       case 'ATTACK_E':
+        const activeCharacterTypeE = this.mimicryTarget || this.characterType;
         if (this.energy >= E_COST && this.cooldowns.e <= 0) {
           this.energy -= E_COST;
           let baseECooldown = 800;
-          if (this.characterType === 'Sukuna') baseECooldown *= 0.75;
+          if (activeCharacterTypeE === 'Sukuna') baseECooldown *= 0.75;
           this.cooldowns.e = baseECooldown;
           
-          let speedMultiplier = this.characterType === 'Sukuna' ? 1.5 : 1;
+          let speedMultiplier = activeCharacterTypeE === 'Sukuna' ? 1.5 : 1;
           let vx = (this.facingRight ? 15 : -15) * speedMultiplier;
           let vy = 0;
           
           let projColor = '#00ffff';
-          if (this.characterType === 'Gojo') projColor = '#8a2be2';
-          if (this.characterType === 'Sukuna') projColor = '#ff0000';
-          if (this.characterType === 'Megumi') projColor = '#00008b';
+          if (activeCharacterTypeE === 'Gojo') projColor = '#8a2be2';
+          if (activeCharacterTypeE === 'Sukuna') projColor = '#ff0000';
+          if (activeCharacterTypeE === 'Megumi') projColor = '#00008b';
+          if (activeCharacterTypeE === 'Hakari') projColor = Math.random() > 0.5 ? '#00ffff' : '#ffff00';
           
-          projectiles.push(new Projectile(this.pos.x + (this.facingRight ? this.width : -20), this.pos.y + 20, vx, vy, this.id, projColor, 'E', this.characterType));
+          projectiles.push(new Projectile(this.pos.x + (this.facingRight ? this.width : -20), this.pos.y + 20, vx, vy, this.id, projColor, 'E', activeCharacterTypeE));
           
           for(let i=0; i<15; i++) {
             particles.push(new Particle(
@@ -248,24 +250,21 @@ export class Abonant extends Entity {
         this.state = 'IDLE';
         break;
       case 'ATTACK_Q':
-        if (this.energy >= Q_COST && this.cooldowns.q <= 0) {
+        const activeCharacterTypeQ = this.mimicryTarget || this.characterType;
+        if (this.energy >= Q_COST && this.cooldowns.q <= 0 && !this.qDisabled) {
           this.energy -= Q_COST;
           this.cooldowns.q = 1500;
           this.phaseTimer = 15 * 16.66;
           let dashSpeed = 20;
-          if (this.characterType === 'Gojo' || this.characterType === 'Megumi') {
+          if (activeCharacterTypeQ === 'Gojo' || activeCharacterTypeQ === 'Megumi' || activeCharacterTypeQ === 'Hakari') {
             dashSpeed *= 1.25;
           }
           
-          if (this.characterType === 'Megumi') {
-            const activeDogsCount = (this as any).activeDogs || 0;
-            if (activeDogsCount < 2 && !isMegumiDomainActive) {
-              (this as any).spawnDogQ = true;
-              this.phaseTimer = 5 * 16.66; // brief pause for cast
-              this.vel.x = 0;
-              this.vel.y = 0;
-              return;
-            }
+          if (activeCharacterTypeQ === 'Megumi') {
+            this.qDashTimer = 15 * 16.66;
+            this.qDashHit = false;
+            this.qDashStartX = this.pos.x;
+            this.qDashStartY = this.pos.y;
           }
           
           this.vel.x = this.facingRight ? dashSpeed : -dashSpeed;

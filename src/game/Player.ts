@@ -41,8 +41,10 @@ export class Player extends Entity {
     };
 
     // Abilities
+    const activeCharacterType = this.mimicryTarget || this.characterType;
+    
     let baseECooldown = isYujiDomainActive ? 250 : 500;
-    if (this.characterType === 'Sukuna') baseECooldown *= 0.75; // 25% faster
+    if (activeCharacterType === 'Sukuna') baseECooldown *= 0.75; // 25% faster
     
     if (isKeyDown('e') && this.cooldowns.e <= 0 && this.energy >= E_COST && this.stunTimer <= 0) {
       this.energy -= E_COST;
@@ -51,16 +53,17 @@ export class Player extends Entity {
       const centerX = this.pos.x + this.width / 2;
       const centerY = this.pos.y + this.height / 2;
       
-      let speedMultiplier = this.characterType === 'Sukuna' ? 1.5 : 1;
+      let speedMultiplier = activeCharacterType === 'Sukuna' ? 1.5 : 1;
       const vx = (this.facingRight ? 15 : -15) * speedMultiplier;
       const vy = 0;
       
       let projColor = '#00ffff'; // Default Yuji
-      if (this.characterType === 'Gojo') projColor = '#8a2be2';
-      if (this.characterType === 'Sukuna') projColor = '#ff0000';
-      if (this.characterType === 'Megumi') projColor = '#00008b'; // Deep blue
+      if (activeCharacterType === 'Gojo') projColor = '#8a2be2';
+      if (activeCharacterType === 'Sukuna') projColor = '#ff0000';
+      if (activeCharacterType === 'Megumi') projColor = '#00008b'; // Deep blue
+      if (activeCharacterType === 'Hakari') projColor = Math.random() > 0.5 ? '#00ffff' : '#ffff00'; // Neon Blue / Yellow
       
-      projectiles.push(new Projectile(centerX, centerY, vx, vy, this.id, projColor, 'E', this.characterType));
+      projectiles.push(new Projectile(centerX, centerY, vx, vy, this.id, projColor, 'E', activeCharacterType));
       soundManager.playBlast();
       
       // Extra E particles
@@ -74,24 +77,20 @@ export class Player extends Entity {
     }
 
     const qCooldown = isYujiDomainActive ? 500 : 1000;
-    if (isKeyDown('q') && this.cooldowns.q <= 0 && this.energy >= Q_COST && this.stunTimer <= 0) {
+    if (isKeyDown('q') && this.cooldowns.q <= 0 && this.energy >= Q_COST && this.stunTimer <= 0 && !this.qDisabled) {
       this.energy -= Q_COST;
       this.cooldowns.q = qCooldown;
       this.phaseTimer = 15 * 16.66; // 15 frames
       let dashSpeed = 25;
-      if (this.characterType === 'Gojo' || this.characterType === 'Megumi') {
+      if (activeCharacterType === 'Gojo' || activeCharacterType === 'Megumi' || activeCharacterType === 'Hakari') {
         dashSpeed *= 1.25; // 25% farther
       }
       
-      if (this.characterType === 'Megumi') {
-        const activeDogsCount = (this as any).activeDogs || 0;
-        if (activeDogsCount < 2 && !isMegumiDomainActive) {
-          (this as any).spawnDogQ = true;
-          this.phaseTimer = 5 * 16.66; // brief pause for cast
-          this.vel.x = 0;
-          this.vel.y = 0;
-          return;
-        }
+      if (activeCharacterType === 'Megumi') {
+        this.qDashTimer = 15 * 16.66;
+        this.qDashHit = false;
+        this.qDashStartX = this.pos.x;
+        this.qDashStartY = this.pos.y;
       }
       
       const centerX = this.pos.x + this.width / 2;

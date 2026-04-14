@@ -1,6 +1,8 @@
 import { CharacterType, Vector2 } from './Types';
 import { Particle } from './Particle';
 
+import { soundManager } from './SoundManager';
+
 export class DomainManager {
   active: boolean = false;
   ownerId: string | null = null;
@@ -24,6 +26,12 @@ export class DomainManager {
     nue: { x: number, y: number, timer: number }[],
     dogs: { x: number, y: number, state: string, cooldown: number, dashTimer: number, startX: number, targetX: number }[]
   } | null = null;
+
+  // Hakari specific
+  hakariState: 'rolling' | 'jackpot' | null = null;
+  hakariRollTimer: number = 0;
+  hakariBuff: 'infinite_ce' | 'invulnerable' | 'mimicry' | null = null;
+  hakariMimicTarget: CharacterType | null = null;
 
   activate(ownerId: string, type: CharacterType) {
     this.active = true;
@@ -57,6 +65,11 @@ export class DomainManager {
           { x: 0, y: 0, state: 'idle', cooldown: 0, dashTimer: 0, startX: 0, targetX: 0 }
         ]
       };
+    } else if (type === 'Hakari') {
+      this.hakariState = 'rolling';
+      this.hakariRollTimer = 3000; // 3 seconds roll
+      this.timer = 3000; // Will be extended upon jackpot
+      this.maxTimer = 3000;
     }
   }
 
@@ -92,6 +105,29 @@ export class DomainManager {
           Math.random() * 2000, Math.random() * 600,
           (Math.random() - 0.5) * 2, -2, 800, '#ff0000', Math.random() * 4
         ));
+      }
+    } else if (this.type === 'Hakari') {
+      if (this.hakariState === 'rolling') {
+        this.hakariRollTimer -= dt;
+        if (Math.random() > 0.9) soundManager.playSlotRoll();
+        if (this.hakariRollTimer <= 0) {
+          this.hakariState = 'jackpot';
+          soundManager.playJackpot();
+          const roll = Math.random();
+          if (roll < 0.33) {
+            this.hakariBuff = 'infinite_ce';
+            this.timer = 10000;
+            this.maxTimer = 10000;
+          } else if (roll < 0.66) {
+            this.hakariBuff = 'invulnerable';
+            this.timer = 15000;
+            this.maxTimer = 15000;
+          } else {
+            this.hakariBuff = 'mimicry';
+            this.timer = 999999; // Infinite
+            this.maxTimer = 999999;
+          }
+        }
       }
     }
   }
@@ -244,6 +280,48 @@ export class DomainManager {
         ctx.moveTo(spineX + xOffset, y);
         ctx.lineTo(spineX + xOffset + 100, y - 30);
         ctx.stroke();
+      }
+    } else if (this.type === 'Hakari') {
+      // Casino theme
+      ctx.fillStyle = '#110022';
+      ctx.fillRect(0, 0, width, height);
+      
+      // Neon grid
+      ctx.strokeStyle = 'rgba(255, 20, 147, 0.3)'; // Neon pink
+      ctx.lineWidth = 2;
+      for(let i = 0; i < width; i += 50) {
+        ctx.beginPath(); ctx.moveTo(i - (camera.x % 50), 0); ctx.lineTo(i - (camera.x % 50), height); ctx.stroke();
+      }
+      for(let i = 0; i < height; i += 50) {
+        ctx.beginPath(); ctx.moveTo(0, i - (camera.y % 50)); ctx.lineTo(width, i - (camera.y % 50)); ctx.stroke();
+      }
+      
+      // Slot machine UI overlay
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+      ctx.fillRect(width / 2 - 150, 50, 300, 100);
+      ctx.strokeStyle = '#ff1493';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(width / 2 - 150, 50, 300, 100);
+      
+      ctx.font = 'bold 40px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      if (this.hakariState === 'rolling') {
+        const symbols = ['7', 'BAR', 'CHERRY', 'BELL', 'DIAMOND'];
+        const s1 = symbols[Math.floor(Date.now() / 100) % symbols.length];
+        const s2 = symbols[Math.floor(Date.now() / 120) % symbols.length];
+        const s3 = symbols[Math.floor(Date.now() / 150) % symbols.length];
+        
+        ctx.fillStyle = Math.random() > 0.5 ? '#00ffff' : '#ffff00';
+        ctx.fillText(`${s1} | ${s2} | ${s3}`, width / 2, 100);
+      } else if (this.hakariState === 'jackpot') {
+        ctx.fillStyle = '#00ff00';
+        let text = "JACKPOT!";
+        if (this.hakariBuff === 'infinite_ce') text = "INFINITE CE!";
+        if (this.hakariBuff === 'invulnerable') text = "INVULNERABLE!";
+        if (this.hakariBuff === 'mimicry') text = "MIMICRY!";
+        ctx.fillText(text, width / 2, 100);
       }
     }
     ctx.restore();

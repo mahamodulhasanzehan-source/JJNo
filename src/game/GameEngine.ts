@@ -22,6 +22,9 @@ import { applyMegumiE } from '../entities/megumi/megumi_E';
 import { applyMegumiQ } from '../entities/megumi/megumi_Q';
 import { handleMegumiDomainInput } from '../entities/megumi/megumi_C';
 
+import { applyHakariE } from '../entities/hakari/hakari_E';
+import { applyHakariQ } from '../entities/hakari/hakari_Q';
+
 export class GameEngine {
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
@@ -80,8 +83,6 @@ export class GameEngine {
     maxTimer: number;
     color: string;
   }[] = [];
-
-  megumiDogs: any[] = [];
 
   constructor(canvas: HTMLCanvasElement, mode: 'single' | 'multi' = 'single', role?: 'host' | 'guest') {
     this.canvas = canvas;
@@ -192,6 +193,12 @@ export class GameEngine {
         applyMegumiE(target, sourceEntity);
       } else if (abilityType === 'Q') {
         applyMegumiQ(target, sourceEntity);
+      }
+    } else if (sourceCharacter === 'Hakari') {
+      if (abilityType === 'E') {
+        applyHakariE(target);
+      } else if (abilityType === 'Q') {
+        applyHakariQ(target, sourceEntity);
       }
     }
   }
@@ -305,9 +312,6 @@ export class GameEngine {
         return; // Stop updating after slowmo
       }
     }
-
-    this.player.activeDogs = this.megumiDogs.filter(d => d.ownerId === this.player.id).length;
-    this.abonant.activeDogs = this.megumiDogs.filter(d => d.ownerId === this.abonant.id).length;
 
     if (this.globalImpactFrameTimer > 0) {
       this.globalImpactFrameTimer -= dt;
@@ -431,14 +435,46 @@ export class GameEngine {
       }
     }
 
+    // Hakari Domain Logic
+    if (isDomainActive && currentDomainType === 'Hakari') {
+      if (this.domainManager.hakariState === 'rolling') {
+        // Freeze both players
+        return;
+      } else if (this.domainManager.hakariState === 'jackpot') {
+        const owner = currentDomainOwner === this.player.id ? this.player : this.abonant;
+        const target = currentDomainOwner === this.player.id ? this.abonant : this.player;
+        
+        if (this.domainManager.hakariBuff === 'infinite_ce') {
+          owner.infiniteCeTimer = 100; // Keep refreshing while domain is active
+        } else if (this.domainManager.hakariBuff === 'invulnerable') {
+          owner.invulnerableTimer = 100;
+        } else if (this.domainManager.hakariBuff === 'mimicry') {
+          owner.mimicryTarget = target.characterType;
+          target.qDisabled = true;
+        }
+      }
+    } else {
+      // Clear Hakari buffs if domain ends, except mimicry which is infinite
+      [this.player, this.abonant].forEach(entity => {
+        if (entity.characterType === 'Hakari') {
+          if (this.domainManager.hakariBuff !== 'mimicry') {
+             // Mimicry is infinite, others end when domain ends
+          }
+        }
+      });
+    }
+
     // Dash Trails
     if (this.graphicsMode === 'HIGH') {
-      if (this.player.isDashing && Math.random() > 0.3) {
-        this.particles.push(new Particle(this.player.pos.x + this.player.width/2, this.player.pos.y + this.player.height/2, 0, 0, 200, this.player.color, 8));
-      }
-      if (this.abonant.isDashing && Math.random() > 0.3) {
-        this.particles.push(new Particle(this.abonant.pos.x + this.abonant.width/2, this.abonant.pos.y + this.abonant.height/2, 0, 0, 200, this.abonant.color, 8));
-      }
+      [this.player, this.abonant].forEach(entity => {
+        if (entity.isDashing && Math.random() > 0.3) {
+          let color = entity.color;
+          if (entity.characterType === 'Hakari') {
+            color = Math.random() > 0.5 ? '#00ffff' : '#ffff00';
+          }
+          this.particles.push(new Particle(entity.pos.x + entity.width/2, entity.pos.y + entity.height/2, 0, 0, 200, color, 8));
+        }
+      });
 
       // Megumi Shadow Aura
       [this.player, this.abonant].forEach(entity => {
@@ -587,7 +623,7 @@ export class GameEngine {
       );
     }
 
-    if (!(isDomainActive && currentDomainType === 'Gojo')) {
+    if (!(isDomainActive && currentDomainType === 'Gojo') && !(isDomainActive && currentDomainType === 'Hakari' && this.domainManager.hakariState === 'rolling')) {
       const playerStats = this.player.update(dt, this.groundY, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Yuji' && currentDomainOwner === this.player.id, isDomainActive && currentDomainType === 'Megumi');
       const abonantStats = this.abonant.update(dt, this.groundY, this.player, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Sukuna', isDomainActive && currentDomainType === 'Yuji' && currentDomainOwner === this.abonant.id, isDomainActive && currentDomainType === 'Megumi');
 
@@ -612,89 +648,23 @@ export class GameEngine {
           }
         }
         
-        // Spawn Megumi Q Dogs
-        if (anyEntity.spawnDogQ) {
-          anyEntity.spawnDogQ = false;
-          const existingColors = this.megumiDogs.filter(d => d.ownerId === entity.id).map(d => d.colorIndex);
-          const colorIndex = existingColors.includes(0) ? 1 : 0; // 0 for white, 1 for black
+        // Megumi Q Tether Logic
+        if (anyEntity.qTether) {
+          anyEntity.qTether.timer -= dt;
+          const dx = anyEntity.qTether.x - entity.pos.x;
+          const dy = anyEntity.qTether.y - entity.pos.y;
+          const dist = Math.sqrt(dx*dx + dy*dy);
           
-          const dir = entity.facingRight ? 1 : -1;
-          
-          this.megumiDogs.push({
-            ownerId: entity.id,
-            x: entity.pos.x + entity.width/2,
-            y: this.groundY - 40,
-            startX: entity.pos.x + entity.width/2,
-            targetX: entity.pos.x + entity.width/2 + dir * 400, // Dash distance
-            state: 'dashing',
-            dashTimer: 600, // 600ms dash
-            lifeTimer: 3000, // 3 seconds
-            colorIndex: colorIndex,
-            cooldown: 0,
-            hasHitDash: false,
-            dashCount: 1
-          });
+          if (anyEntity.qTether.timer <= 0 || dist < 30) {
+            anyEntity.qTether = null;
+          } else {
+            // Strong pull towards the tether point
+            entity.vel.x += (dx / dist) * 2.5;
+            entity.vel.y += (dy / dist) * 2.5;
+          }
         }
       });
       
-      // Update Megumi Q Dogs
-      for (let i = this.megumiDogs.length - 1; i >= 0; i--) {
-        const dog = this.megumiDogs[i];
-        dog.lifeTimer -= dt;
-        if (dog.lifeTimer <= 0) {
-          this.megumiDogs.splice(i, 1);
-          continue;
-        }
-        
-        const owner = dog.ownerId === this.player.id ? this.player : this.abonant;
-        const target = dog.ownerId === this.player.id ? this.abonant : this.player;
-        
-        if (dog.cooldown > 0) dog.cooldown -= dt;
-        
-        if (dog.state === 'dashing') {
-          dog.dashTimer -= dt;
-          const progress = 1 - Math.max(0, dog.dashTimer / 600);
-          dog.x = dog.startX + (dog.targetX - dog.startX) * progress;
-          
-          // Collision with target
-          if (!dog.hasHitDash && Math.abs(dog.x - (target.pos.x + target.width/2)) < 40 && target.phaseTimer <= 0) {
-            if (dog.dashCount === 1) {
-              if (target.takeDamage(5, isDomainActive, currentDomainType, currentDomainOwner)) { // 5 damage
-                this.triggerHitSpark(target.pos.x + target.width/2, target.pos.y + target.height/2, '#00008b');
-                dog.hasHitDash = true;
-              }
-            } else {
-              target.slowTimer = 1500; // 1.5 second slow
-              this.triggerHitSpark(target.pos.x + target.width/2, target.pos.y + target.height/2, '#4a90e2');
-              dog.hasHitDash = true;
-            }
-          }
-          
-          if (dog.dashTimer <= 0) {
-            if (dog.dashCount >= 2) {
-              this.megumiDogs.splice(i, 1);
-              continue;
-            }
-            dog.state = 'idle';
-            dog.cooldown = 1000;
-          }
-        } else if (dog.state === 'idle') {
-          // Prowl around target
-          const targetX = target.pos.x + Math.sin(Date.now() * 0.004 + dog.colorIndex * Math.PI) * 150;
-          dog.x += (targetX - dog.x) * 0.05;
-          
-          const distToTarget = Math.abs(dog.x - (target.pos.x + target.width/2));
-          if (distToTarget < 300 && dog.cooldown <= 0) {
-            dog.state = 'dashing';
-            dog.dashTimer = 600;
-            dog.startX = dog.x;
-            dog.targetX = target.pos.x + target.width/2 + (dog.x < target.pos.x ? 250 : -250);
-            dog.hasHitDash = false;
-            dog.dashCount++;
-          }
-        }
-      }
-
       if (playerStats?.didSecondaryHit || playerStats?.didBleedHit) {
         this.spawnVisualSlash(this.player.pos.x + this.player.width/2, this.player.pos.y + this.player.height/2, '#ff0000');
         this.triggerShake(5);
@@ -728,6 +698,14 @@ export class GameEngine {
             this.triggerHitSpark(p.pos.x, p.pos.y, '#f1c40f');
           }
           
+          // Hakari E Knockback
+          if ((this.player as any).hakariEKnockback) {
+            (this.player as any).hakariEKnockback = false;
+            this.player.vel.y = -10;
+            this.player.vel.x = p.vel.x > 0 ? 45 : -45;
+            this.triggerHitSpark(p.pos.x, p.pos.y, '#ff1493');
+          }
+          
           // VFX Triggers
           if (p.characterType === 'Gojo') {
             this.triggerWhiteVoid(p.pos.x, p.pos.y);
@@ -754,6 +732,14 @@ export class GameEngine {
             this.triggerHitSpark(p.pos.x, p.pos.y, '#f1c40f');
           }
 
+          // Hakari E Knockback
+          if ((this.abonant as any).hakariEKnockback) {
+            (this.abonant as any).hakariEKnockback = false;
+            this.abonant.vel.y = -10;
+            this.abonant.vel.x = p.vel.x > 0 ? 45 : -45;
+            this.triggerHitSpark(p.pos.x, p.pos.y, '#ff1493');
+          }
+
           // VFX Triggers
           if (p.characterType === 'Gojo') {
             this.triggerWhiteVoid(p.pos.x, p.pos.y);
@@ -777,6 +763,14 @@ export class GameEngine {
       if (this.abonant.takeDamage(damage, isDomainActive, this.domainManager.type, this.domainManager.ownerId)) {
         this.player.energy += 5;
         this.applyAbilityEffects(this.abonant, this.player.characterType, 'Q', this.player);
+        
+        // Hakari Q Knockback
+        if ((this.abonant as any).hakariQKnockback) {
+          (this.abonant as any).hakariQKnockback = false;
+          this.abonant.vel.y = -10;
+          this.abonant.vel.x = this.player.vel.x > 0 ? 45 : -45;
+        }
+        
         this.player.hasHitDash = true;
         this.triggerHitSpark(this.abonant.pos.x + this.abonant.width/2, this.abonant.pos.y + this.abonant.height/2, this.player.color);
         this.triggerShake(8);
@@ -789,6 +783,14 @@ export class GameEngine {
       if (this.player.takeDamage(damage, isDomainActive, this.domainManager.type, this.domainManager.ownerId)) {
         this.abonant.energy += 5;
         this.applyAbilityEffects(this.player, this.abonant.characterType, 'Q', this.abonant);
+        
+        // Hakari Q Knockback
+        if ((this.player as any).hakariQKnockback) {
+          (this.player as any).hakariQKnockback = false;
+          this.player.vel.y = -10;
+          this.player.vel.x = this.abonant.vel.x > 0 ? 45 : -45;
+        }
+        
         this.abonant.hasHitDash = true;
         this.triggerHitSpark(this.player.pos.x + this.player.width/2, this.player.pos.y + this.player.height/2, this.abonant.color);
         this.triggerShake(8);
@@ -1034,46 +1036,6 @@ export class GameEngine {
       this.ctx.restore();
     }
 
-    // Draw Megumi Q Dogs
-    this.megumiDogs.forEach(dog => {
-      this.ctx.save();
-      this.ctx.fillStyle = dog.colorIndex === 0 ? '#f8f8ff' : '#111111'; // White and Black Dog
-      const target = dog.ownerId === this.player.id ? this.abonant : this.player;
-      const dir = dog.state === 'dashing' ? (dog.targetX > dog.startX ? 1 : -1) : (dog.x > target.pos.x ? -1 : 1);
-      
-      // Body (longer)
-      this.ctx.fillRect(dog.x - 25 - this.camera.x, dog.y - 25 - this.camera.y, 50, 25);
-      
-      // Head
-      this.ctx.fillRect(dog.x + (dir * 20) - 15 - this.camera.x, dog.y - 40 - this.camera.y, 30, 25);
-      
-      // Snout
-      this.ctx.fillRect(dog.x + (dir * 35) - 10 - this.camera.x, dog.y - 30 - this.camera.y, 20, 15);
-      
-      // Ears
-      this.ctx.beginPath();
-      this.ctx.moveTo(dog.x + (dir * 10) - this.camera.x, dog.y - 40 - this.camera.y);
-      this.ctx.lineTo(dog.x + (dir * 5) - this.camera.x, dog.y - 55 - this.camera.y);
-      this.ctx.lineTo(dog.x + (dir * 20) - this.camera.x, dog.y - 40 - this.camera.y);
-      this.ctx.fill();
-
-      // Legs
-      this.ctx.fillRect(dog.x - 20 - this.camera.x, dog.y - this.camera.y, 10, 15); // Back leg
-      this.ctx.fillRect(dog.x + 10 - this.camera.x, dog.y - this.camera.y, 10, 15); // Front leg
-      
-      // Tail
-      this.ctx.beginPath();
-      this.ctx.moveTo(dog.x - (dir * 25) - this.camera.x, dog.y - 20 - this.camera.y);
-      this.ctx.lineTo(dog.x - (dir * 40) - this.camera.x, dog.y - 30 - this.camera.y);
-      this.ctx.lineTo(dog.x - (dir * 25) - this.camera.x, dog.y - 10 - this.camera.y);
-      this.ctx.fill();
-      
-      // Eye (red glow)
-      this.ctx.fillStyle = '#ff0000';
-      this.ctx.fillRect(dog.x + (dir * 25) - 2 - this.camera.x, dog.y - 35 - this.camera.y, 4, 4);
-      this.ctx.restore();
-    });
-
     // Draw Megumi Tethers
     [this.player, this.abonant].forEach(entity => {
       const anyEntity = entity as any;
@@ -1110,6 +1072,26 @@ export class GameEngine {
         this.ctx.fillStyle = '#111111';
         this.ctx.beginPath();
         this.ctx.arc(endX, endY, 3, 0, Math.PI*2);
+        this.ctx.fill();
+      }
+      
+      if (anyEntity.qTether) {
+        const startX = entity.pos.x + entity.width/2 - this.camera.x;
+        const startY = entity.pos.y + entity.height/2 - this.camera.y;
+        const endX = anyEntity.qTether.x - this.camera.x;
+        const endY = anyEntity.qTether.y - this.camera.y;
+        
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)'; // White band for Q
+        this.ctx.lineWidth = 3;
+        this.ctx.beginPath();
+        this.ctx.moveTo(startX, startY);
+        this.ctx.lineTo(endX, endY);
+        this.ctx.stroke();
+        
+        // Draw anchor point
+        this.ctx.fillStyle = '#ffffff';
+        this.ctx.beginPath();
+        this.ctx.arc(endX, endY, 5, 0, Math.PI*2);
         this.ctx.fill();
       }
     });

@@ -158,6 +158,51 @@ export class SoundManager {
     playDing(0.2);
   }
 
+  playJackpot() {
+    if (!this.ctx) return;
+    const playDing = (timeOffset: number, freq: number) => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, this.ctx!.currentTime + timeOffset);
+      
+      gain.gain.setValueAtTime(0, this.ctx!.currentTime + timeOffset);
+      gain.gain.linearRampToValueAtTime(0.3, this.ctx!.currentTime + timeOffset + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.01, this.ctx!.currentTime + timeOffset + 1);
+      
+      osc.connect(gain);
+      gain.connect(this.ctx!.destination);
+      osc.start(this.ctx!.currentTime + timeOffset);
+      osc.stop(this.ctx!.currentTime + timeOffset + 1);
+    };
+    
+    playDing(0, 800);
+    playDing(0.1, 1000);
+    playDing(0.2, 1200);
+    playDing(0.3, 1600);
+  }
+
+  playSlotRoll() {
+    if (!this.ctx) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'square';
+    
+    // Rapidly changing frequency to simulate rolling
+    for (let i = 0; i < 10; i++) {
+        osc.frequency.setValueAtTime(400 + Math.random() * 400, this.ctx.currentTime + i * 0.1);
+    }
+    
+    gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.1, this.ctx.currentTime + 0.9);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 1);
+    
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 1);
+  }
+
   makeDistortionCurve(amount: number) {
     const k = typeof amount === 'number' ? amount : 50,
       n_samples = 44100,

@@ -76,6 +76,11 @@ export default function App() {
                 selected={character === 'Megumi'}
                 onClick={() => { soundManager.playClick(); setCharacter('Megumi'); }}
               />
+              <CharacterCard 
+                name="Hakari" title="The Gambler" color="hover:shadow-[0_0_50px_rgba(255,20,147,0.5)] hover:border-pink-500" glowColor="bg-pink-500" stats={{ hp: 200, ce: 100, dmg: 'RNG', speed: 'High' }}
+                selected={character === 'Hakari'}
+                onClick={() => { soundManager.playClick(); setCharacter('Hakari'); }}
+              />
             </div>
 
             {character && (
@@ -124,7 +129,7 @@ function PreparingScreen({ match, role, initialCharacter, onComplete }: { match:
       hasCompleted.current = true;
       let finalChar = selected;
       if (!finalChar) {
-        const chars: CharacterType[] = ['Yuji', 'Gojo', 'Sukuna', 'Megumi'];
+        const chars: CharacterType[] = ['Yuji', 'Gojo', 'Sukuna', 'Megumi', 'Hakari'];
         finalChar = chars[Math.floor(Math.random() * chars.length)];
       }
       
@@ -187,6 +192,11 @@ function PreparingScreen({ match, role, initialCharacter, onComplete }: { match:
           name="Megumi" title="Ten Shadows" color="hover:shadow-[0_0_50px_rgba(0,0,139,0.5)] hover:border-blue-800" glowColor="bg-blue-800" stats={{ hp: 200, ce: 100, dmg: 'Med', speed: 'High' }}
           selected={selected === 'Megumi'}
           onClick={() => { soundManager.playClick(); setSelected('Megumi'); }}
+        />
+        <CharacterCard 
+          name="Hakari" title="The Gambler" color="hover:shadow-[0_0_50px_rgba(255,20,147,0.5)] hover:border-pink-500" glowColor="bg-pink-500" stats={{ hp: 200, ce: 100, dmg: 'RNG', speed: 'High' }}
+          selected={selected === 'Hakari'}
+          onClick={() => { soundManager.playClick(); setSelected('Hakari'); }}
         />
       </div>
     </div>
