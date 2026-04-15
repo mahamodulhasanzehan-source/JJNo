@@ -34,6 +34,7 @@ export class DomainManager {
   hakariShowTimer: number = 0;
   hakariBuff: 'infinite_ce' | 'invulnerable' | 'mimicry' | null = null;
   hakariMimicTarget: CharacterType | null = null;
+  hakariUsedBuffs: string[] = [];
 
   activate(ownerId: string, type: CharacterType) {
     this.active = true;
@@ -117,14 +118,18 @@ export class DomainManager {
           this.hakariState = 'jackpot';
           this.hakariShowTimer = 2000;
           soundManager.playJackpot();
-          const roll = Math.random();
-          if (roll < 0.33) {
-            this.hakariBuff = 'infinite_ce';
-          } else if (roll < 0.66) {
-            this.hakariBuff = 'invulnerable';
-          } else {
-            this.hakariBuff = 'mimicry';
+          
+          const allBuffs = ['infinite_ce', 'invulnerable', 'mimicry'];
+          let availableBuffs = allBuffs.filter(b => !this.hakariUsedBuffs.includes(b));
+          
+          if (availableBuffs.length === 0) {
+            this.hakariUsedBuffs = [];
+            availableBuffs = allBuffs;
           }
+          
+          const rollIndex = Math.floor(Math.random() * availableBuffs.length);
+          this.hakariBuff = availableBuffs[rollIndex] as any;
+          this.hakariUsedBuffs.push(this.hakariBuff!);
         }
       } else if (this.hakariState === 'jackpot') {
         this.hakariShowTimer -= dt;

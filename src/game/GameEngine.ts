@@ -408,7 +408,7 @@ export class GameEngine {
           // Prowl around target loosely, not forced left/right
           const targetX = target.pos.x + Math.sin(Date.now() * 0.004 + index * Math.PI) * 150;
           dog.x += (targetX - dog.x) * 0.05;
-          dog.y = this.groundY - 40; // Ground level
+          dog.y = this.groundY; // Ground level
           
           // Check proximity to target
           const distToTarget = Math.abs(dog.x - (target.pos.x + target.width/2));
