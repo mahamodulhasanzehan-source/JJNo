@@ -15,7 +15,7 @@ export class Player extends Entity {
     this.input = input;
   }
 
-  update(dt: number, groundY: number, projectiles: Projectile[], particles: Particle[], triggerShake: () => void, isYujiDomainActive: boolean = false, isMegumiDomainActive: boolean = false) {
+  update(dt: number, groundY: number, projectiles: Projectile[], particles: Particle[], triggerShake: () => void, isYujiDomainActive: boolean = false, isMegumiDomainActive: boolean = false, isSukunaDomainActive: boolean = false) {
     const energyRegenMultiplier = (isYujiDomainActive && this.characterType === 'Yuji') ? 1.5 : 1.0;
     const statsResult = this.updateStats(dt, energyRegenMultiplier);
     
@@ -47,31 +47,35 @@ export class Player extends Entity {
     if (activeCharacterType === 'Sukuna') baseECooldown *= 0.75; // 25% faster
     
     if (activeCharacterType === 'Sukuna') {
-      if (isKeyDown('e') && this.cooldowns.e <= 0 && this.energy >= E_COST && this.stunTimer <= 0) {
-        this.eChargeTimer += dt;
-      } else if (!isKeyDown('e') && this.eChargeTimer > 0) {
-        this.energy -= E_COST;
-        this.cooldowns.e = baseECooldown;
-        
-        const chargeTime = this.eChargeTimer;
-        this.eChargeTimer = 0;
-        
-        const isFuga = chargeTime >= 1000;
-        const bonusDamage = Math.floor(chargeTime / 500) * 7;
-        const bonusSize = Math.floor(chargeTime / 500) * 20;
-        
-        const centerX = this.pos.x + this.width / 2;
-        const centerY = this.pos.y + this.height / 2;
-        const vx = (this.facingRight ? 15 : -15) * 1.5;
-        const vy = 0;
-        const projColor = isFuga ? '#ff4500' : '#ff0000';
-        
-        projectiles.push(new Projectile(centerX, centerY, vx, vy, this.id, projColor, 'E', activeCharacterType, bonusDamage, bonusSize, isFuga ? 'fuga' : 'normal'));
-        soundManager.playBlast();
-        
-        for(let i=0; i<15; i++) {
-          particles.push(new Particle(centerX, centerY, (Math.random() - 0.5) * 15 + vx, (Math.random() - 0.5) * 15 + vy, 400, projColor, 6));
+      if (!isSukunaDomainActive) {
+        if (isKeyDown('e') && this.cooldowns.e <= 0 && this.energy >= E_COST && this.stunTimer <= 0) {
+          this.eChargeTimer += dt;
+        } else if (!isKeyDown('e') && this.eChargeTimer > 0) {
+          this.energy -= E_COST;
+          this.cooldowns.e = baseECooldown;
+          
+          const chargeTime = this.eChargeTimer;
+          this.eChargeTimer = 0;
+          
+          const isFuga = chargeTime >= 1000;
+          const bonusDamage = Math.floor(chargeTime / 500) * 7;
+          const bonusSize = Math.floor(chargeTime / 500) * 20;
+          
+          const centerX = this.pos.x + this.width / 2;
+          const centerY = this.pos.y + this.height / 2;
+          const vx = (this.facingRight ? 15 : -15) * 1.5;
+          const vy = 0;
+          const projColor = isFuga ? '#ff4500' : '#ff0000';
+          
+          projectiles.push(new Projectile(centerX, centerY, vx, vy, this.id, projColor, 'E', activeCharacterType, bonusDamage, bonusSize, isFuga ? 'fuga' : 'normal'));
+          soundManager.playBlast();
+          
+          for(let i=0; i<15; i++) {
+            particles.push(new Particle(centerX, centerY, (Math.random() - 0.5) * 15 + vx, (Math.random() - 0.5) * 15 + vy, 400, projColor, 6));
+          }
         }
+      } else {
+        this.eChargeTimer = 0;
       }
     } else {
       if (isKeyDown('e') && this.cooldowns.e <= 0 && this.energy >= E_COST && this.stunTimer <= 0) {
@@ -112,9 +116,19 @@ export class Player extends Entity {
     if (isKeyDown('q') && this.cooldowns.q <= 0 && this.energy >= Q_COST && this.stunTimer <= 0 && !this.qDisabled) {
       if (activeCharacterType === 'Sukuna') {
         this.energy -= Q_COST;
-        this.cooldowns.q = qCooldown;
-        this.sukunaQTimer = 2000; // 2 seconds startup
-        this.vel.x = 0; // Stationary
+        this.cooldowns.q = 2000; // 2 seconds cooldown
+        
+        const centerX = this.pos.x + this.width / 2;
+        const centerY = this.pos.y + this.height / 2;
+        const vx = (this.facingRight ? 15 : -15) * 0.5; // 50% speed of E
+        const vy = 0;
+        
+        projectiles.push(new Projectile(
+          centerX, centerY, vx, vy, this.id, '#ff0000', 'Q', 'Sukuna',
+          25, 100, 'world_slash' // 25 damage, massive size (100 bonus)
+        ));
+        soundManager.playSlash();
+        triggerShake();
       } else {
         this.energy -= Q_COST;
         this.cooldowns.q = qCooldown;
@@ -152,32 +166,7 @@ export class Player extends Entity {
     }
 
     if (this.sukunaQTimer > 0) {
-      this.sukunaQTimer -= dt;
-      this.vel.x = 0; // Keep stationary while charging
-      
-      // Charge particles
-      if (Math.random() > 0.5) {
-        particles.push(new Particle(
-          this.pos.x + this.width / 2 + (Math.random() - 0.5) * 60,
-          this.pos.y + this.height / 2 + (Math.random() - 0.5) * 100,
-          0, -2, 500, '#ff0000', 4 + Math.random() * 4
-        ));
-      }
-      
-      if (this.sukunaQTimer <= 0) {
-        // Fire World Cutting Slash
-        const centerX = this.pos.x + this.width / 2;
-        const centerY = this.pos.y + this.height / 2;
-        const vx = (this.facingRight ? 15 : -15) * 0.5; // 50% speed of E
-        const vy = 0;
-        
-        projectiles.push(new Projectile(
-          centerX, centerY, vx, vy, this.id, '#ff0000', 'Q', 'Sukuna',
-          25, 100, 'world_slash' // 25 damage, massive size (100 bonus)
-        ));
-        soundManager.playSlash();
-        triggerShake();
-      }
+      this.sukunaQTimer = 0;
     }
 
     this.updatePhysics(dt, groundY);

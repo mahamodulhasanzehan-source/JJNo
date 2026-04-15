@@ -45,32 +45,7 @@ export class Abonant extends Entity {
 
     this.executeState(dt, projectiles, particles, triggerShake, isSukunaDomainActive, isYujiDomainActive, isMegumiDomainActive);
     if (this.sukunaQTimer > 0) {
-      this.sukunaQTimer -= dt;
-      this.vel.x = 0; // Keep stationary while charging
-      
-      // Charge particles
-      if (Math.random() > 0.5) {
-        particles.push(new Particle(
-          this.pos.x + this.width / 2 + (Math.random() - 0.5) * 60,
-          this.pos.y + this.height / 2 + (Math.random() - 0.5) * 100,
-          0, -2, 500, '#ff0000', 4 + Math.random() * 4
-        ));
-      }
-      
-      if (this.sukunaQTimer <= 0) {
-        // Fire World Cutting Slash
-        const centerX = this.pos.x + this.width / 2;
-        const centerY = this.pos.y + this.height / 2;
-        const vx = (this.facingRight ? 15 : -15) * 0.5; // 50% speed of E
-        const vy = 0;
-        
-        projectiles.push(new Projectile(
-          centerX, centerY, vx, vy, this.id, '#ff0000', 'Q', 'Sukuna',
-          25, 100, 'world_slash' // 25 damage, massive size (100 bonus)
-        ));
-        soundManager.playSlash();
-        triggerShake();
-      }
+      this.sukunaQTimer = 0;
     }
 
     this.updatePhysics(dt, groundY);
@@ -251,28 +226,33 @@ export class Abonant extends Entity {
       case 'ATTACK_E':
         const activeCharacterTypeE = this.mimicryTarget || this.characterType;
         if (activeCharacterTypeE === 'Sukuna') {
-          if (this.eChargeTimer === 0 && this.energy >= E_COST && this.cooldowns.e <= 0) {
-            this.aiChargeTarget = Math.random() * 1500; // Charge up to 1.5s
-            this.eChargeTimer += dt;
-          } else if (this.eChargeTimer > 0) {
-            this.eChargeTimer += dt;
-            if (this.eChargeTimer >= this.aiChargeTarget) {
-              this.energy -= E_COST;
-              this.cooldowns.e = 800 * 0.75;
-              const isFuga = this.eChargeTimer >= 1000;
-              const bonusDamage = Math.floor(this.eChargeTimer / 500) * 7;
-              const bonusSize = Math.floor(this.eChargeTimer / 500) * 20;
-              const vx = (this.facingRight ? 15 : -15) * 1.5;
-              const projColor = isFuga ? '#ff4500' : '#ff0000';
-              projectiles.push(new Projectile(
-                this.pos.x + (this.facingRight ? this.width : -20), this.pos.y + 20, 
-                vx, 0, this.id, projColor, 'E', activeCharacterTypeE,
-                bonusDamage, bonusSize, isFuga ? 'fuga' : 'normal'
-              ));
-              this.eChargeTimer = 0;
+          if (!isSukunaDomainActive) {
+            if (this.eChargeTimer === 0 && this.energy >= E_COST && this.cooldowns.e <= 0) {
+              this.aiChargeTarget = Math.random() * 1500; // Charge up to 1.5s
+              this.eChargeTimer += dt;
+            } else if (this.eChargeTimer > 0) {
+              this.eChargeTimer += dt;
+              if (this.eChargeTimer >= this.aiChargeTarget) {
+                this.energy -= E_COST;
+                this.cooldowns.e = 800 * 0.75;
+                const isFuga = this.eChargeTimer >= 1000;
+                const bonusDamage = Math.floor(this.eChargeTimer / 500) * 7;
+                const bonusSize = Math.floor(this.eChargeTimer / 500) * 20;
+                const vx = (this.facingRight ? 15 : -15) * 1.5;
+                const projColor = isFuga ? '#ff4500' : '#ff0000';
+                projectiles.push(new Projectile(
+                  this.pos.x + (this.facingRight ? this.width : -20), this.pos.y + 20, 
+                  vx, 0, this.id, projColor, 'E', activeCharacterTypeE,
+                  bonusDamage, bonusSize, isFuga ? 'fuga' : 'normal'
+                ));
+                this.eChargeTimer = 0;
+                this.state = 'IDLE';
+              }
+            } else {
               this.state = 'IDLE';
             }
           } else {
+            this.eChargeTimer = 0;
             this.state = 'IDLE';
           }
         } else {
@@ -312,8 +292,20 @@ export class Abonant extends Entity {
         if (this.energy >= Q_COST && this.cooldowns.q <= 0 && !this.qDisabled) {
           if (activeCharacterTypeQ === 'Sukuna') {
             this.energy -= Q_COST;
-            this.cooldowns.q = 1500;
-            this.sukunaQTimer = 2000;
+            this.cooldowns.q = 2000; // 2 seconds cooldown
+            
+            const centerX = this.pos.x + this.width / 2;
+            const centerY = this.pos.y + this.height / 2;
+            const vx = (this.facingRight ? 15 : -15) * 0.5; // 50% speed of E
+            const vy = 0;
+            
+            projectiles.push(new Projectile(
+              centerX, centerY, vx, vy, this.id, '#ff0000', 'Q', 'Sukuna',
+              25, 100, 'world_slash' // 25 damage, massive size (100 bonus)
+            ));
+            soundManager.playSlash();
+            triggerShake();
+            
             this.vel.x = 0;
             this.state = 'IDLE';
           } else {
