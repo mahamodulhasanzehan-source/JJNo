@@ -15,10 +15,8 @@ export class DomainManager {
   whiteFlashTimer: number = 0;
   
   // Sukuna specific
-  sukunaSlashesRemaining: number = 0;
-  sukunaCurrentLine: { start: Vector2, end: Vector2 } | null = null;
-  sukunaSlashes: { p1: Vector2, p2: Vector2, timer: number }[] = [];
-  sukunaSlashRateLimitTimer: number = 0;
+  sukunaOmniCleaveTimer: number = 0;
+  sukunaOmniCleaveCount: number = 0;
   impactFrameTimer: number = 0;
   
   // Megumi specific
@@ -49,9 +47,8 @@ export class DomainManager {
     } else if (type === 'Sukuna') {
       this.timer = 8000; // 8s duration
       this.maxTimer = 8000;
-      this.sukunaSlashesRemaining = 10;
-      this.sukunaCurrentLine = null;
-      this.sukunaSlashes = [];
+      this.sukunaOmniCleaveTimer = 0;
+      this.sukunaOmniCleaveCount = 0;
     } else if (type === 'Yuji') {
       this.timer = 30000;
       this.maxTimer = 30000;
@@ -97,12 +94,6 @@ export class DomainManager {
       }
     } else if (this.type === 'Sukuna') {
       if (this.impactFrameTimer > 0) this.impactFrameTimer -= dt;
-      for (let i = this.sukunaSlashes.length - 1; i >= 0; i--) {
-        this.sukunaSlashes[i].timer -= dt;
-        if (this.sukunaSlashes[i].timer <= 0) {
-          this.sukunaSlashes.splice(i, 1);
-        }
-      }
       // Ambient shrine particles
       if (Math.random() > 0.7) {
         particles.push(new Particle(

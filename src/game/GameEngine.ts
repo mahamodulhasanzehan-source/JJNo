@@ -626,23 +626,15 @@ export class GameEngine {
         currentDomainOwner === this.player.id,
         this.player,
         this.abonant,
-        mouseJustPressed,
-        this.input.mouse.isDown,
-        mouseJustReleased,
-        this.input.mouse.x,
-        this.input.mouse.y,
-        this.camera,
-        this.domainManager.sukunaSlashesRemaining,
-        (val) => { this.domainManager.sukunaSlashesRemaining = val; },
-        this.domainManager.sukunaCurrentLine,
-        (val) => { this.domainManager.sukunaCurrentLine = val; },
-        this.domainManager.sukunaSlashes,
-        this.lineRectCollide.bind(this),
+        this.input.isKeyDown('e'),
+        this.domainManager.sukunaOmniCleaveTimer,
+        (val) => { this.domainManager.sukunaOmniCleaveTimer = val; },
+        this.domainManager.sukunaOmniCleaveCount,
+        (val) => { this.domainManager.sukunaOmniCleaveCount = val; },
+        this.projectiles,
         (val) => this.triggerShake(val),
         (val) => { this.domainManager.impactFrameTimer = val; },
-        () => soundManager.playSlash(),
-        this.domainManager.sukunaSlashRateLimitTimer,
-        (val) => { this.domainManager.sukunaSlashRateLimitTimer = val; }
+        () => soundManager.playSlash()
       );
     }
 
@@ -794,6 +786,9 @@ export class GameEngine {
           if (p.variant === 'elephant') {
             this.player.stunTimer = 500;
             this.triggerShake(15);
+          } else if (p.variant === 'world_slash') {
+            this.player.stunTimer = 250;
+            this.triggerShake(20);
           } else {
             this.applyAbilityEffects(this.player, p.characterType, p.abilityType, this.abonant);
           }
@@ -840,6 +835,9 @@ export class GameEngine {
           if (p.variant === 'elephant') {
             this.abonant.stunTimer = 500;
             this.triggerShake(15);
+          } else if (p.variant === 'world_slash') {
+            this.abonant.stunTimer = 250;
+            this.triggerShake(20);
           } else {
             this.applyAbilityEffects(this.abonant, p.characterType, p.abilityType, this.player);
           }
@@ -973,11 +971,35 @@ export class GameEngine {
         this.gameOver = true;
         this.winner = 'player';
         this.slowMoTimer = 2000; // 2 seconds of slowmo
+        this.triggerDismantle(this.abonant);
       } else if (this.player.hp <= 0) {
         this.gameOver = true;
         this.winner = 'abonant';
         this.slowMoTimer = 2000;
+        this.triggerDismantle(this.player);
       }
+    }
+  }
+
+  triggerDismantle(entity: Entity) {
+    if (entity.isDismantled) return;
+    entity.isDismantled = true;
+    this.triggerShake(20);
+    
+    const mult = this.graphicsMode === 'HIGH' ? 3 : 1;
+    for (let i = 0; i < 40 * mult; i++) {
+      const p = new Particle(
+        entity.pos.x + Math.random() * entity.width,
+        entity.pos.y + Math.random() * entity.height,
+        (Math.random() - 0.5) * 30,
+        (Math.random() - 0.5) * 30 - 10,
+        1000 + Math.random() * 1000,
+        entity.color,
+        10 + Math.random() * 15
+      );
+      p.shape = 'rect'; // Force rectangular chunks
+      p.hasGravity = true;
+      this.particles.push(p);
     }
   }
 
@@ -1084,39 +1106,47 @@ export class GameEngine {
       this.ctx.shadowColor = '#ffaa00';
       this.ctx.shadowBlur = 15;
     }
-    this.player.draw(this.ctx, this.camera);
+    if (!this.player.isDismantled) {
+      this.player.draw(this.ctx, this.camera);
+    }
     this.ctx.shadowBlur = 0;
     
-    this.abonant.draw(this.ctx, this.camera);
+    if (!this.abonant.isDismantled) {
+      this.abonant.draw(this.ctx, this.camera);
+    }
 
     // Draw Tracking Diamonds
     this.ctx.save();
     
     // Player Diamond (Blue)
-    this.ctx.fillStyle = '#00aaff';
-    this.ctx.shadowColor = '#00aaff';
-    this.ctx.shadowBlur = 10;
-    this.ctx.beginPath();
-    const px = this.player.pos.x + this.player.width / 2 - this.camera.x;
-    const py = this.player.pos.y - 30 - this.camera.y + Math.sin(performance.now() / 200) * 5;
-    this.ctx.moveTo(px, py - 10);
-    this.ctx.lineTo(px + 10, py);
-    this.ctx.lineTo(px, py + 10);
-    this.ctx.lineTo(px - 10, py);
-    this.ctx.fill();
+    if (!this.player.isDismantled) {
+      this.ctx.fillStyle = '#00aaff';
+      this.ctx.shadowColor = '#00aaff';
+      this.ctx.shadowBlur = 10;
+      this.ctx.beginPath();
+      const px = this.player.pos.x + this.player.width / 2 - this.camera.x;
+      const py = this.player.pos.y - 30 - this.camera.y + Math.sin(performance.now() / 200) * 5;
+      this.ctx.moveTo(px, py - 10);
+      this.ctx.lineTo(px + 10, py);
+      this.ctx.lineTo(px, py + 10);
+      this.ctx.lineTo(px - 10, py);
+      this.ctx.fill();
+    }
 
     // Abonant Diamond (Red)
-    this.ctx.fillStyle = '#ff0044';
-    this.ctx.shadowColor = '#ff0044';
-    this.ctx.shadowBlur = 10;
-    this.ctx.beginPath();
-    const ax = this.abonant.pos.x + this.abonant.width / 2 - this.camera.x;
-    const ay = this.abonant.pos.y - 30 - this.camera.y + Math.sin(performance.now() / 200 + Math.PI) * 5;
-    this.ctx.moveTo(ax, ay - 10);
-    this.ctx.lineTo(ax + 10, ay);
-    this.ctx.lineTo(ax, ay + 10);
-    this.ctx.lineTo(ax - 10, ay);
-    this.ctx.fill();
+    if (!this.abonant.isDismantled) {
+      this.ctx.fillStyle = '#ff0044';
+      this.ctx.shadowColor = '#ff0044';
+      this.ctx.shadowBlur = 10;
+      this.ctx.beginPath();
+      const ax = this.abonant.pos.x + this.abonant.width / 2 - this.camera.x;
+      const ay = this.abonant.pos.y - 30 - this.camera.y + Math.sin(performance.now() / 200 + Math.PI) * 5;
+      this.ctx.moveTo(ax, ay - 10);
+      this.ctx.lineTo(ax + 10, ay);
+      this.ctx.lineTo(ax, ay + 10);
+      this.ctx.lineTo(ax - 10, ay);
+      this.ctx.fill();
+    }
 
     this.ctx.restore();
     
@@ -1420,37 +1450,7 @@ export class GameEngine {
 
     // Draw Sukuna Slashes
     if (this.domainManager.active && this.domainManager.type === 'Sukuna') {
-      if (this.domainManager.sukunaCurrentLine) {
-        this.ctx.strokeStyle = 'rgba(255, 0, 0, 0.5)';
-        this.ctx.lineWidth = 2;
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.domainManager.sukunaCurrentLine.start.x - this.camera.x, this.domainManager.sukunaCurrentLine.start.y - this.camera.y);
-        this.ctx.lineTo(this.domainManager.sukunaCurrentLine.end.x - this.camera.x, this.domainManager.sukunaCurrentLine.end.y - this.camera.y);
-        this.ctx.stroke();
-      }
-      for (const slash of this.domainManager.sukunaSlashes) {
-        this.ctx.strokeStyle = '#ff0000';
-        this.ctx.lineWidth = 4 * (slash.timer / 300);
-        
-        // Draw jagged line paths
-        this.ctx.beginPath();
-        this.ctx.moveTo(slash.p1.x - this.camera.x, slash.p1.y - this.camera.y);
-        
-        const dx = slash.p2.x - slash.p1.x;
-        const dy = slash.p2.y - slash.p1.y;
-        const dist = Math.hypot(dx, dy);
-        const steps = Math.max(2, Math.floor(dist / 20));
-        
-        for (let i = 1; i <= steps; i++) {
-          const t = i / steps;
-          const x = slash.p1.x + dx * t + (Math.random() - 0.5) * 20;
-          const y = slash.p1.y + dy * t + (Math.random() - 0.5) * 20;
-          this.ctx.lineTo(x - this.camera.x, y - this.camera.y);
-        }
-        
-        this.ctx.lineTo(slash.p2.x - this.camera.x, slash.p2.y - this.camera.y);
-        this.ctx.stroke();
-      }
+      // Omni-Directional Cleave projectiles are drawn in the projectile loop
     }
 
     // Draw Visual Slashes

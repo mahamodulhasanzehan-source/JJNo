@@ -73,17 +73,48 @@ export class Projectile {
       ctx.fillRect(x + this.width/2 - 10, y + this.height, 20, 40); // Trunk
     } else if (this.variant === 'fuga') {
       ctx.fillStyle = '#ff4500';
+      ctx.shadowColor = '#ff4500';
+      ctx.shadowBlur = 20;
       ctx.beginPath();
       if (this.vel.x > 0) {
         ctx.moveTo(x, y + this.height/2);
         ctx.lineTo(x + this.width, y);
+        ctx.lineTo(x + this.width + 20, y + this.height/2);
         ctx.lineTo(x + this.width, y + this.height);
       } else {
         ctx.moveTo(x + this.width, y + this.height/2);
         ctx.lineTo(x, y);
+        ctx.lineTo(x - 20, y + this.height/2);
         ctx.lineTo(x, y + this.height);
       }
       ctx.fill();
+      ctx.shadowBlur = 0;
+      
+      // Core
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(x + this.width/2, y + this.height/2, this.height/4, 0, Math.PI*2);
+      ctx.fill();
+    } else if (this.variant === 'world_slash') {
+      ctx.strokeStyle = '#ffffff';
+      ctx.shadowColor = '#ff0000';
+      ctx.shadowBlur = 15;
+      ctx.lineWidth = 12;
+      ctx.beginPath();
+      const isRight = this.vel.x > 0;
+      // Massive vertical slash
+      ctx.moveTo(x + (isRight ? 0 : this.width), y - this.height);
+      ctx.lineTo(x + (isRight ? this.width : 0), y + this.height * 2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    } else if (this.variant === 'omni_cleave') {
+      ctx.strokeStyle = '#ff0000';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      const angle = Math.atan2(this.vel.y, this.vel.x);
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + Math.cos(angle) * 60, y + Math.sin(angle) * 60);
+      ctx.stroke();
     } else if (this.characterType === 'Gojo') {
       ctx.globalAlpha = 0.1; // 90% transparent
       const grad = ctx.createRadialGradient(x + 10, y + 10, 0, x + 10, y + 10, 15);

@@ -46,6 +46,10 @@ export class Entity {
   
   yujiEComboTimer: number = 0;
   
+  sukunaQTimer: number = 0;
+  
+  isDismantled: boolean = false;
+  
   characterType: CharacterType;
   color: string;
   

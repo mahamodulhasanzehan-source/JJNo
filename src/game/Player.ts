@@ -57,7 +57,7 @@ export class Player extends Entity {
         this.eChargeTimer = 0;
         
         const isFuga = chargeTime >= 1000;
-        const bonusDamage = Math.floor(chargeTime / 500) * 5;
+        const bonusDamage = Math.floor(chargeTime / 500) * 7;
         const bonusSize = Math.floor(chargeTime / 500) * 20;
         
         const centerX = this.pos.x + this.width / 2;
@@ -110,37 +110,73 @@ export class Player extends Entity {
 
     const qCooldown = isYujiDomainActive ? 500 : 1000;
     if (isKeyDown('q') && this.cooldowns.q <= 0 && this.energy >= Q_COST && this.stunTimer <= 0 && !this.qDisabled) {
-      this.energy -= Q_COST;
-      this.cooldowns.q = qCooldown;
-      this.phaseTimer = 15 * 16.66; // 15 frames
-      let dashSpeed = 25;
-      if (activeCharacterType === 'Gojo' || activeCharacterType === 'Megumi' || activeCharacterType === 'Hakari') {
-        dashSpeed *= 1.25; // 25% farther
+      if (activeCharacterType === 'Sukuna') {
+        this.energy -= Q_COST;
+        this.cooldowns.q = qCooldown;
+        this.sukunaQTimer = 2000; // 2 seconds startup
+        this.vel.x = 0; // Stationary
+      } else {
+        this.energy -= Q_COST;
+        this.cooldowns.q = qCooldown;
+        this.phaseTimer = 15 * 16.66; // 15 frames
+        let dashSpeed = 25;
+        if (activeCharacterType === 'Gojo' || activeCharacterType === 'Megumi' || activeCharacterType === 'Hakari') {
+          dashSpeed *= 1.25; // 25% farther
+        }
+        
+        if (activeCharacterType === 'Megumi') {
+          this.qDashTimer = 15 * 16.66;
+          this.qDashHit = false;
+          this.qDashStartX = this.pos.x;
+          this.qDashStartY = this.pos.y;
+        }
+        
+        const centerX = this.pos.x + this.width / 2;
+        const centerY = this.pos.y + this.height / 2;
+        this.vel.x = this.facingRight ? dashSpeed : -dashSpeed;
+        this.vel.y = 0;
+        
+        this.hasHitDash = false;
+        triggerShake();
+        soundManager.playDash();
+        
+        // Dash particles
+        for(let i=0; i<20; i++) {
+          particles.push(new Particle(
+            centerX, centerY,
+            (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20,
+            300, this.color, 8
+          ));
+        }
       }
+    }
+
+    if (this.sukunaQTimer > 0) {
+      this.sukunaQTimer -= dt;
+      this.vel.x = 0; // Keep stationary while charging
       
-      if (activeCharacterType === 'Megumi') {
-        this.qDashTimer = 15 * 16.66;
-        this.qDashHit = false;
-        this.qDashStartX = this.pos.x;
-        this.qDashStartY = this.pos.y;
-      }
-      
-      const centerX = this.pos.x + this.width / 2;
-      const centerY = this.pos.y + this.height / 2;
-      this.vel.x = this.facingRight ? dashSpeed : -dashSpeed;
-      this.vel.y = 0;
-      
-      this.hasHitDash = false;
-      triggerShake();
-      soundManager.playDash();
-      
-      // Dash particles
-      for(let i=0; i<20; i++) {
+      // Charge particles
+      if (Math.random() > 0.5) {
         particles.push(new Particle(
-          centerX, centerY,
-          (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20,
-          300, this.color, 8
+          this.pos.x + this.width / 2 + (Math.random() - 0.5) * 60,
+          this.pos.y + this.height / 2 + (Math.random() - 0.5) * 100,
+          0, -2, 500, '#ff0000', 4 + Math.random() * 4
         ));
+      }
+      
+      if (this.sukunaQTimer <= 0) {
+        // Fire World Cutting Slash
+        const centerX = this.pos.x + this.width / 2;
+        const centerY = this.pos.y + this.height / 2;
+        const vx = (this.facingRight ? 15 : -15) * 0.5; // 50% speed of E
+        const vy = 0;
+        
+        projectiles.push(new Projectile(
+          centerX, centerY, vx, vy, this.id, '#ff0000', 'Q', 'Sukuna',
+          25, 100, 'world_slash' // 25 damage, massive size (100 bonus)
+        ));
+        soundManager.playSlash();
+        triggerShake();
       }
     }
 

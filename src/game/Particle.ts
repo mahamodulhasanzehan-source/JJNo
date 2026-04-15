@@ -9,6 +9,7 @@ export class Particle {
   size: number;
   opacity: number;
   shape: 'rect' | 'circle' | 'line';
+  hasGravity: boolean = false;
 
   constructor(x: number, y: number, vx: number, vy: number, life: number, color: string, size: number) {
     this.pos = { x, y };
@@ -23,6 +24,9 @@ export class Particle {
   }
 
   update(dt: number) {
+    if (this.hasGravity) {
+      this.vel.y += 0.5 * (dt / 16.66);
+    }
     this.pos.x += this.vel.x * (dt / 16.66);
     this.pos.y += this.vel.y * (dt / 16.66);
     this.life -= dt;

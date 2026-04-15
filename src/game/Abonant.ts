@@ -44,6 +44,35 @@ export class Abonant extends Entity {
     }
 
     this.executeState(dt, projectiles, particles, triggerShake, isSukunaDomainActive, isYujiDomainActive, isMegumiDomainActive);
+    if (this.sukunaQTimer > 0) {
+      this.sukunaQTimer -= dt;
+      this.vel.x = 0; // Keep stationary while charging
+      
+      // Charge particles
+      if (Math.random() > 0.5) {
+        particles.push(new Particle(
+          this.pos.x + this.width / 2 + (Math.random() - 0.5) * 60,
+          this.pos.y + this.height / 2 + (Math.random() - 0.5) * 100,
+          0, -2, 500, '#ff0000', 4 + Math.random() * 4
+        ));
+      }
+      
+      if (this.sukunaQTimer <= 0) {
+        // Fire World Cutting Slash
+        const centerX = this.pos.x + this.width / 2;
+        const centerY = this.pos.y + this.height / 2;
+        const vx = (this.facingRight ? 15 : -15) * 0.5; // 50% speed of E
+        const vy = 0;
+        
+        projectiles.push(new Projectile(
+          centerX, centerY, vx, vy, this.id, '#ff0000', 'Q', 'Sukuna',
+          25, 100, 'world_slash' // 25 damage, massive size (100 bonus)
+        ));
+        soundManager.playSlash();
+        triggerShake();
+      }
+    }
+
     this.updatePhysics(dt, groundY);
     return statsResult;
   }
@@ -231,7 +260,7 @@ export class Abonant extends Entity {
               this.energy -= E_COST;
               this.cooldowns.e = 800 * 0.75;
               const isFuga = this.eChargeTimer >= 1000;
-              const bonusDamage = Math.floor(this.eChargeTimer / 500) * 5;
+              const bonusDamage = Math.floor(this.eChargeTimer / 500) * 7;
               const bonusSize = Math.floor(this.eChargeTimer / 500) * 20;
               const vx = (this.facingRight ? 15 : -15) * 1.5;
               const projColor = isFuga ? '#ff4500' : '#ff0000';
@@ -281,32 +310,40 @@ export class Abonant extends Entity {
       case 'ATTACK_Q':
         const activeCharacterTypeQ = this.mimicryTarget || this.characterType;
         if (this.energy >= Q_COST && this.cooldowns.q <= 0 && !this.qDisabled) {
-          this.energy -= Q_COST;
-          this.cooldowns.q = 1500;
-          this.phaseTimer = 15 * 16.66;
-          let dashSpeed = 20;
-          if (activeCharacterTypeQ === 'Gojo' || activeCharacterTypeQ === 'Megumi' || activeCharacterTypeQ === 'Hakari') {
-            dashSpeed *= 1.25;
-          }
-          
-          if (activeCharacterTypeQ === 'Megumi') {
-            this.qDashTimer = 15 * 16.66;
-            this.qDashHit = false;
-            this.qDashStartX = this.pos.x;
-            this.qDashStartY = this.pos.y;
-          }
-          
-          this.vel.x = this.facingRight ? dashSpeed : -dashSpeed;
-          this.vel.y = 0;
-          
-          this.hasHitDash = false;
-          triggerShake();
-          for(let i=0; i<20; i++) {
-            particles.push(new Particle(
-              this.pos.x + this.width/2, this.pos.y + this.height/2,
-              (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20,
-              300, this.color, 8
-            ));
+          if (activeCharacterTypeQ === 'Sukuna') {
+            this.energy -= Q_COST;
+            this.cooldowns.q = 1500;
+            this.sukunaQTimer = 2000;
+            this.vel.x = 0;
+            this.state = 'IDLE';
+          } else {
+            this.energy -= Q_COST;
+            this.cooldowns.q = 1500;
+            this.phaseTimer = 15 * 16.66;
+            let dashSpeed = 20;
+            if (activeCharacterTypeQ === 'Gojo' || activeCharacterTypeQ === 'Megumi' || activeCharacterTypeQ === 'Hakari') {
+              dashSpeed *= 1.25;
+            }
+            
+            if (activeCharacterTypeQ === 'Megumi') {
+              this.qDashTimer = 15 * 16.66;
+              this.qDashHit = false;
+              this.qDashStartX = this.pos.x;
+              this.qDashStartY = this.pos.y;
+            }
+            
+            this.vel.x = this.facingRight ? dashSpeed : -dashSpeed;
+            this.vel.y = 0;
+            
+            this.hasHitDash = false;
+            triggerShake();
+            for(let i=0; i<20; i++) {
+              particles.push(new Particle(
+                this.pos.x + this.width/2, this.pos.y + this.height/2,
+                (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20,
+                300, this.color, 8
+              ));
+            }
           }
         }
         this.state = 'IDLE';

@@ -1,82 +1,70 @@
 import { Vector2 } from '../../game/Types';
 import { Entity } from '../../game/Entity';
+import { Projectile } from '../../game/Projectile';
 
 export function handleSukunaDomainInput(
   dt: number,
   isOwnerPlayer: boolean,
   player: Entity,
   abonant: Entity,
-  mouseJustPressed: boolean,
-  isMouseDown: boolean,
-  mouseJustReleased: boolean,
-  mouseX: number,
-  mouseY: number,
-  camera: Vector2,
-  sukunaSlashesRemaining: number,
-  setSukunaSlashesRemaining: (val: number) => void,
-  sukunaCurrentLine: { start: Vector2, end: Vector2 } | null,
-  setSukunaCurrentLine: (val: { start: Vector2, end: Vector2 } | null) => void,
-  sukunaSlashes: { p1: Vector2, p2: Vector2, timer: number }[],
-  lineRectCollide: (p1: Vector2, p2: Vector2, rect: any) => boolean,
+  isEPressed: boolean,
+  omniCleaveTimer: number,
+  setOmniCleaveTimer: (val: number) => void,
+  omniCleaveCount: number,
+  setOmniCleaveCount: (val: number) => void,
+  projectiles: any[],
   triggerShake: (val: number) => void,
   setImpactFrameTimer: (val: number) => void,
-  playSound: () => void,
-  slashRateLimitTimer: number,
-  setSlashRateLimitTimer: (val: number) => void
+  playSound: () => void
 ) {
+  const owner = isOwnerPlayer ? player : abonant;
   const target = isOwnerPlayer ? abonant : player;
+  
   target.takeDamage((5 * dt) / 1000); // 5 DMG/sec passive DoT
 
-  if (slashRateLimitTimer > 0) {
-    setSlashRateLimitTimer(slashRateLimitTimer - dt);
+  // Trigger Omni-Directional Cleave
+  if (isEPressed && omniCleaveTimer <= 0 && omniCleaveCount === 0) {
+    setOmniCleaveCount(10);
+    setOmniCleaveTimer(50); // 1 slash every 50ms (0.5s total for 10)
   }
 
-  if (isOwnerPlayer) {
-    if (mouseJustPressed && sukunaSlashesRemaining > 0 && slashRateLimitTimer <= 0) {
-      setSukunaCurrentLine({
-        start: { x: mouseX + camera.x, y: mouseY + camera.y },
-        end: { x: mouseX + camera.x, y: mouseY + camera.y }
-      });
-    } else if (isMouseDown && sukunaCurrentLine) {
-      setSukunaCurrentLine({
-        start: sukunaCurrentLine.start,
-        end: { x: mouseX + camera.x, y: mouseY + camera.y }
-      });
-    } else if (mouseJustReleased && sukunaCurrentLine) {
-      const hit = lineRectCollide(sukunaCurrentLine.start, sukunaCurrentLine.end, abonant.getRect());
-      if (hit) {
-         abonant.takeDamage(14.4); // Doubled from 7.2
-      }
-      setSukunaSlashesRemaining(sukunaSlashesRemaining - 1);
-      setSlashRateLimitTimer(500); // 500ms rate limit (2 per second)
-      sukunaSlashes.push({
-        p1: { ...sukunaCurrentLine.start },
-        p2: { ...sukunaCurrentLine.end },
-        timer: 300
-      });
-      setImpactFrameTimer(50); // 50ms impact frames
-      triggerShake(10);
-      playSound();
-      setSukunaCurrentLine(null);
+  // AI Logic for Omni-Directional Cleave
+  if (!isOwnerPlayer && omniCleaveCount === 0 && Math.random() < 0.02) {
+    setOmniCleaveCount(10);
+    setOmniCleaveTimer(50);
+  }
+
+  // Process Omni-Directional Cleave
+  if (omniCleaveCount > 0) {
+    if (omniCleaveTimer > 0) {
+      setOmniCleaveTimer(omniCleaveTimer - dt);
     }
-  } else {
-    // AI Sukuna targets player automatically
-    if (sukunaSlashesRemaining > 0 && Math.random() < 0.05 && slashRateLimitTimer <= 0) {
-      const p1 = { x: player.pos.x + player.width/2 + (Math.random() - 0.5) * 100, y: player.pos.y + player.height/2 + (Math.random() - 0.5) * 100 };
-      const p2 = { x: player.pos.x + player.width/2 + (Math.random() - 0.5) * 100, y: player.pos.y + player.height/2 + (Math.random() - 0.5) * 100 };
+    
+    if (omniCleaveTimer <= 0) {
+      // Fire 1 slash
+      const isLeft = omniCleaveCount % 2 === 0;
+      const angleOffset = (Math.random() * 16 - 8) * (Math.PI / 180); // -8 to +8 degrees
+      const baseAngle = isLeft ? Math.PI : 0;
+      const finalAngle = baseAngle + angleOffset;
       
-      if (lineRectCollide(p1, p2, player.getRect())) {
-         player.takeDamage(14.4); // Doubled from 7.2
-         setSukunaSlashesRemaining(sukunaSlashesRemaining - 1);
-         setSlashRateLimitTimer(500); // 500ms rate limit
-         sukunaSlashes.push({
-           p1: { ...p1 },
-           p2: { ...p2 },
-           timer: 300
-         });
-         setImpactFrameTimer(50);
-         triggerShake(10);
-         playSound();
+      const speed = 45; // Fast-moving linear projectile
+      const vx = Math.cos(finalAngle) * speed;
+      const vy = Math.sin(finalAngle) * speed;
+      
+      const centerX = owner.pos.x + owner.width / 2;
+      const centerY = owner.pos.y + owner.height / 2;
+      
+      projectiles.push(new Projectile(
+        centerX, centerY, vx, vy, owner.id, '#ff0000', 'DOMAIN_E', 'Sukuna', 15, 20, 'omni_cleave'
+      ));
+      
+      playSound();
+      triggerShake(5);
+      setImpactFrameTimer(20);
+      
+      setOmniCleaveCount(omniCleaveCount - 1);
+      if (omniCleaveCount - 1 > 0) {
+        setOmniCleaveTimer(50);
       }
     }
   }
