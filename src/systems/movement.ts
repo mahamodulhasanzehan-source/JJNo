@@ -1,9 +1,9 @@
 import { InputManager } from '../game/InputManager';
 import { Vector2, CharacterType } from '../game/Types';
 
-export const STAMINA_MAX = 3000;
+export const STAMINA_MAX = 5000;
 export const STAMINA_RECOVERY_RATE = 0.2; // 1s per 5s -> 1000ms per 5000ms
-export const STAMINA_PENALTY_DURATION = 3000;
+export const STAMINA_PENALTY_DURATION = 0;
 
 export function handlePlayerMovement(
   dt: number,

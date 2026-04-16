@@ -641,8 +641,20 @@ export class GameEngine {
     const isHakariFrozen = isDomainActive && currentDomainType === 'Hakari' && (this.domainManager.hakariState === 'rolling' || this.domainManager.hakariState === 'jackpot');
 
     if (!(isDomainActive && currentDomainType === 'Gojo') && !isHakariFrozen) {
-      const playerStats = this.player.update(dt, this.groundY, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Yuji' && currentDomainOwner === this.player.id, isDomainActive && currentDomainType === 'Megumi');
-      const abonantStats = this.abonant.update(dt, this.groundY, this.player, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Sukuna', isDomainActive && currentDomainType === 'Yuji' && currentDomainOwner === this.abonant.id, isDomainActive && currentDomainType === 'Megumi');
+      const playerStats = this.player.update(dt, this.groundY, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Yuji' && currentDomainOwner === this.player.id, isDomainActive && currentDomainType === 'Megumi', isDomainActive && currentDomainType === 'Sukuna' && currentDomainOwner === this.player.id);
+      
+      const abonantStats = this.abonant.update(
+        dt, 
+        this.groundY, 
+        this.player, 
+        this.projectiles, 
+        this.particles, 
+        () => this.triggerShake(5), 
+        isDomainActive && currentDomainType === 'Sukuna' && currentDomainOwner === this.abonant.id, 
+        isDomainActive && currentDomainType === 'Yuji' && currentDomainOwner === this.abonant.id, 
+        isDomainActive && currentDomainType === 'Megumi',
+        isDomainActive && currentDomainOwner === this.player.id // isEnemyDomainActive
+      );
 
       // Megumi E Tether Logic
       [this.player, this.abonant].forEach(entity => {

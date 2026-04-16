@@ -29,7 +29,7 @@ export class Abonant extends Entity {
     this.input = input;
   }
 
-  update(dt: number, groundY: number, player: Player, projectiles: Projectile[], particles: Particle[], triggerShake: () => void, isSukunaDomainActive: boolean = false, isYujiDomainActive: boolean = false, isMegumiDomainActive: boolean = false) {
+  update(dt: number, groundY: number, player: Player, projectiles: Projectile[], particles: Particle[], triggerShake: () => void, isSukunaDomainActive: boolean = false, isYujiDomainActive: boolean = false, isMegumiDomainActive: boolean = false, isEnemyDomainActive: boolean = false) {
     const energyRegenMultiplier = (isYujiDomainActive && this.characterType === 'Yuji') ? 1.5 : 1.0;
     const statsResult = this.updateStats(dt, energyRegenMultiplier);
     this.target = player;
@@ -39,12 +39,12 @@ export class Abonant extends Entity {
     } else {
       this.reactionTimer -= dt;
       if (this.reactionTimer <= 0) {
-        this.think(projectiles, isSukunaDomainActive, isYujiDomainActive);
+        this.think(projectiles, isSukunaDomainActive, isYujiDomainActive, isEnemyDomainActive);
         this.reactionTimer = 150 + Math.random() * 100; // 150-250ms reaction time
       }
     }
 
-    this.executeState(dt, projectiles, particles, triggerShake, isSukunaDomainActive, isYujiDomainActive, isMegumiDomainActive);
+    this.executeState(dt, projectiles, particles, triggerShake, isSukunaDomainActive, isYujiDomainActive, isMegumiDomainActive, isEnemyDomainActive);
     if (this.sukunaQTimer > 0) {
       this.sukunaQTimer = 0;
     }
@@ -89,7 +89,7 @@ export class Abonant extends Entity {
     }
   }
 
-  think(projectiles: Projectile[], isSukunaDomainActive: boolean = false, isYujiDomainActive: boolean = false) {
+  think(projectiles: Projectile[], isSukunaDomainActive: boolean = false, isYujiDomainActive: boolean = false, isEnemyDomainActive: boolean = false) {
     if (!this.target) return;
     const dist = this.target.pos.x - this.pos.x;
     const absDist = Math.abs(dist);
@@ -129,10 +129,12 @@ export class Abonant extends Entity {
        }
     }
 
-    if (this.target.energy >= 50 && Math.random() > 0.7) {
+    if (this.target.energy >= 50 && Math.random() > 0.7 && !isEnemyDomainActive) {
        this.state = 'DESPERATION';
        return;
     }
+
+
 
     // Movement and Attack Logic
     if (absDist > 500) {
@@ -172,6 +174,11 @@ export class Abonant extends Entity {
       } else {
         this.state = 'RETREAT';
       }
+    }
+
+    // Block abilities in enemy domain
+    if (isEnemyDomainActive && (this.state === 'ATTACK_E' || this.state === 'ATTACK_Q' || this.state === 'DOMAIN' || this.state === 'DESPERATION')) {
+      this.state = 'APPROACH';
     }
   }
 
