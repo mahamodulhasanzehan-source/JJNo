@@ -345,7 +345,7 @@ export class GameEngine {
     const canPlayerActivateDomain = !this.domainManager.active || (this.domainManager.type !== 'Yuji' && this.domainManager.ownerId !== this.player.id);
     if (this.input.isKeyDown('c') && this.player.energy >= playerDomainCost && this.player.cooldowns.c <= 0 && canPlayerActivateDomain) {
       this.player.energy -= playerDomainCost;
-      this.player.cooldowns.c = 15000; // 15s cooldown
+      this.player.cooldowns.c = 1000; // 1s cooldown to prevent double taps
       this.domainManager.activate(this.player.id, this.player.characterType);
       this.chromaticAberration = 10;
       this.triggerShake(10);
@@ -360,7 +360,7 @@ export class GameEngine {
     const canAbonantActivateDomain = !this.domainManager.active || (this.domainManager.type !== 'Yuji' && this.domainManager.ownerId !== this.abonant.id);
     if (this.abonant.state === 'DOMAIN' && this.abonant.energy >= abonantDomainCost && this.abonant.cooldowns.c <= 0 && canAbonantActivateDomain) {
       this.abonant.energy -= abonantDomainCost;
-      this.abonant.cooldowns.c = 15000;
+      this.abonant.cooldowns.c = 1000; // 1s cooldown
       this.domainManager.activate(this.abonant.id, this.abonant.characterType);
       this.chromaticAberration = 10;
       this.triggerShake(10);
@@ -456,15 +456,50 @@ export class GameEngine {
 
     // Domain Activation Burst
     if (!wasDomainActive && isDomainActive) {
-      this.triggerShake(25);
-      this.chromaticAberration = 20;
-      this.globalImpactFrameTimer = 100; // 100ms of global impact frames
-      const mult = this.graphicsMode === 'HIGH' ? 3 : 0.5;
-      for(let i=0; i<100 * mult; i++) {
+      this.triggerShake(40); // Massive shake
+      this.chromaticAberration = 40; // Heavy chromatic aberration
+      this.globalImpactFrameTimer = 150; // 150ms of global impact frames
+      const mult = this.graphicsMode === 'HIGH' ? 6 : 1;
+      
+      const owner = currentDomainOwner === this.player.id ? this.player : this.abonant;
+      const tX = owner.pos.x + owner.width/2;
+      const tY = owner.pos.y + owner.height/2;
+
+      let primaryColor = '#ffffff';
+      let secondaryColor = '#888888';
+      
+      if (currentDomainType === 'Sukuna') {
+        primaryColor = '#ff0000'; secondaryColor = '#000000';
+      } else if (currentDomainType === 'Gojo') {
+        primaryColor = '#8a2be2'; secondaryColor = '#0000ff';
+      } else if (currentDomainType === 'Hakari') {
+        primaryColor = '#ff1493'; secondaryColor = '#00ffff';
+      } else if (currentDomainType === 'Megumi') {
+        primaryColor = '#00008b'; secondaryColor = '#101020';
+      } else if (currentDomainType === 'Yuji') {
+        primaryColor = '#f1c40f'; secondaryColor = '#8b0000';
+      }
+
+      // Shockwave ring explosion
+      for(let i=0; i<80 * mult; i++) {
+        const angle = (Math.PI * 2 / (80 * mult)) * i;
+        const speed = 25 + Math.random() * 15;
         this.particles.push(new Particle(
-          this.player.pos.x + this.player.width/2, this.player.pos.y + this.player.height/2,
-          (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 40,
-          1000 + Math.random() * 500, '#ffffff', 5 + Math.random() * 10
+          tX, tY,
+          Math.cos(angle) * speed, Math.sin(angle) * speed,
+          800 + Math.random() * 400, primaryColor, 8 + Math.random() * 12
+        ));
+      }
+
+      // Lingering thick smoke / dust ("blue smoke" feeling but themed to character)
+      for(let i=0; i<150 * mult; i++) {
+        this.particles.push(new Particle(
+          tX + (Math.random() - 0.5) * 400, 
+          tY + (Math.random() - 0.5) * 400,
+          (Math.random() - 0.5) * 10, -Math.random() * 15, // Float upwards
+          2000 + Math.random() * 1500, // Lingers for a long time
+          Math.random() > 0.5 ? primaryColor : secondaryColor, 
+          15 + Math.random() * 30 // Immense size
         ));
       }
     }
@@ -783,7 +818,7 @@ export class GameEngine {
       // Collision with entities
       const pRect = p.getRect();
       if (p.ownerId !== this.player.id && this.checkCollision(pRect, this.player.getRect())) {
-        let damage = p.characterType === 'Sukuna' ? 4 + p.damageOverride : E_DMG + p.damageOverride;
+        let damage = p.characterType === 'Sukuna' ? (4 + p.damageOverride) / 3 : E_DMG + p.damageOverride;
         if (p.characterType === 'Megumi') damage -= 3;
         if (p.variant === 'elephant') damage = 15;
         
@@ -829,7 +864,7 @@ export class GameEngine {
           p.active = false;
         }
       } else if (p.ownerId !== this.abonant.id && this.checkCollision(pRect, this.abonant.getRect())) {
-        let damage = p.characterType === 'Sukuna' ? 4 + p.damageOverride : E_DMG + p.damageOverride;
+        let damage = p.characterType === 'Sukuna' ? (4 + p.damageOverride) / 3 : E_DMG + p.damageOverride;
         if (p.characterType === 'Megumi') damage -= 3;
         if (p.variant === 'elephant') damage = 15;
         
