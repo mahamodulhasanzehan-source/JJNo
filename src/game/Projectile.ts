@@ -96,17 +96,22 @@ export class Projectile {
       ctx.arc(x + this.width/2, y + this.height/2, this.height/4, 0, Math.PI*2);
       ctx.fill();
     } else if (this.variant === 'world_slash') {
-      ctx.strokeStyle = '#ffffff';
+      ctx.strokeStyle = '#ffffff'; // Outer bright aura
       ctx.shadowColor = '#ff0000';
-      ctx.shadowBlur = 15;
-      ctx.lineWidth = 12;
+      ctx.shadowBlur = 30;
+      ctx.lineWidth = 20;
+      
       ctx.beginPath();
-      const isRight = this.vel.x > 0;
       // Massive vertical slash
-      ctx.moveTo(x + (isRight ? 0 : this.width), y - this.height);
-      ctx.lineTo(x + (isRight ? this.width : 0), y + this.height * 2);
+      ctx.moveTo(x + this.width / 2, y - 600); // Reaches incredibly high up
+      ctx.lineTo(x + this.width / 2, y + 600); // Reaches incredibly far down
       ctx.stroke();
+      
+      // Pure black reality-splitting core
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 8;
       ctx.shadowBlur = 0;
+      ctx.stroke();
     } else if (this.variant === 'omni_cleave') {
       ctx.strokeStyle = '#ff0000';
       ctx.lineWidth = 4;

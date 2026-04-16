@@ -342,7 +342,7 @@ export class GameEngine {
 
     // Domain Expansion Input (Player)
     const playerDomainCost = this.player.characterType === 'Gojo' ? 75 : C_COST;
-    const canPlayerActivateDomain = !this.domainManager.active || (this.domainManager.type !== 'Yuji' && this.domainManager.ownerId !== this.player.id);
+    const canPlayerActivateDomain = !this.domainManager.active;
     if (this.input.isKeyDown('c') && this.player.energy >= playerDomainCost && this.player.cooldowns.c <= 0 && canPlayerActivateDomain) {
       this.player.energy -= playerDomainCost;
       this.player.cooldowns.c = 1000; // 1s cooldown to prevent double taps
@@ -357,7 +357,7 @@ export class GameEngine {
 
     // Domain Expansion (Abonant)
     const abonantDomainCost = this.abonant.characterType === 'Gojo' ? 75 : C_COST;
-    const canAbonantActivateDomain = !this.domainManager.active || (this.domainManager.type !== 'Yuji' && this.domainManager.ownerId !== this.abonant.id);
+    const canAbonantActivateDomain = !this.domainManager.active;
     if (this.abonant.state === 'DOMAIN' && this.abonant.energy >= abonantDomainCost && this.abonant.cooldowns.c <= 0 && canAbonantActivateDomain) {
       this.abonant.energy -= abonantDomainCost;
       this.abonant.cooldowns.c = 1000; // 1s cooldown
@@ -661,7 +661,7 @@ export class GameEngine {
         currentDomainOwner === this.player.id,
         this.player,
         this.abonant,
-        this.input.isKeyDown('e'),
+        currentDomainOwner === this.player.id && this.input.isKeyDown('e'),
         this.domainManager.sukunaOmniCleaveTimer,
         (val) => { this.domainManager.sukunaOmniCleaveTimer = val; },
         this.domainManager.sukunaOmniCleaveCount,

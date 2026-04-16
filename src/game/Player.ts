@@ -15,7 +15,7 @@ export class Player extends Entity {
     this.input = input;
   }
 
-  update(dt: number, groundY: number, projectiles: Projectile[], particles: Particle[], triggerShake: () => void, isYujiDomainActive: boolean = false, isMegumiDomainActive: boolean = false, isSukunaDomainActive: boolean = false) {
+  update(dt: number, groundY: number, projectiles: Projectile[], particles: Particle[], triggerShake: () => void, isYujiDomainActive: boolean = false, isMegumiDomainActive: boolean = false, isSukunaDomainActive: boolean = false, target?: Entity) {
     const energyRegenMultiplier = (isYujiDomainActive && this.characterType === 'Yuji') ? 1.5 : 1.0;
     const statsResult = this.updateStats(dt, energyRegenMultiplier);
     
@@ -118,17 +118,31 @@ export class Player extends Entity {
         this.energy -= Q_COST;
         this.cooldowns.q = 2000; // 2 seconds cooldown
         
-        const centerX = this.pos.x + this.width / 2;
-        const centerY = this.pos.y + this.height / 2;
-        const vx = (this.facingRight ? 15 : -15) * 0.5; // 50% speed of E
-        const vy = 0;
+        // Sure-hit effect: Massive slash dropping perfectly vertical onto the target's position
+        let targetX = this.pos.x + this.width / 2;
+        if (target) {
+          targetX = target.pos.x + target.width / 2;
+        }
+
+        const startY = -600; // Spawn high off-screen
+        const vx = 0;
+        const vy = 50; // Falls very fast down
         
         projectiles.push(new Projectile(
-          centerX, centerY, vx, vy, this.id, '#ff0000', 'Q', 'Sukuna',
-          25, 100, 'world_slash' // 25 damage, massive size (100 bonus)
+          targetX, startY, vx, vy, this.id, '#ff0000', 'Q', 'Sukuna',
+          35, 150, 'world_slash' // 35 damage, super massive (150 bonus)
         ));
         soundManager.playSlash();
         triggerShake();
+        
+        // Pre-fire impact/blood particles marking the sure-hit
+        for (let i = 0; i < 20; i++) {
+          particles.push(new Particle(
+            targetX + (Math.random() - 0.5) * 80, -200 + (Math.random() * 800),
+            0, Math.random() * 20,
+            600, '#ff0000', 8 + Math.random() * 10
+          ));
+        }
       } else {
         this.energy -= Q_COST;
         this.cooldowns.q = qCooldown;

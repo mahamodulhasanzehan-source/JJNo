@@ -59,8 +59,8 @@ export function handleSukunaDomainInput(
       ));
       
       playSound();
-      triggerShake(5);
-      setImpactFrameTimer(20);
+      triggerShake(3); // Reduced shake
+      setImpactFrameTimer(0); // Removed impact frames completely to avoid flashing/epilepsy triggers
       
       setOmniCleaveCount(omniCleaveCount - 1);
       if (omniCleaveCount - 1 > 0) {
