@@ -114,7 +114,7 @@ export class Player extends Entity {
 
     const qCooldown = isYujiDomainActive ? 500 : 1000;
     if (isKeyDown('q') && this.cooldowns.q <= 0 && this.energy >= Q_COST && this.stunTimer <= 0 && !this.qDisabled) {
-      if (activeCharacterType === 'Sukuna') {
+      if (activeCharacterType === 'Sukuna' && isSukunaDomainActive) {
         this.energy -= Q_COST;
         this.cooldowns.q = 2000; // 2 seconds cooldown
         
@@ -134,7 +134,7 @@ export class Player extends Entity {
         this.cooldowns.q = qCooldown;
         this.phaseTimer = 15 * 16.66; // 15 frames
         let dashSpeed = 25;
-        if (activeCharacterType === 'Gojo' || activeCharacterType === 'Megumi' || activeCharacterType === 'Hakari') {
+        if (activeCharacterType === 'Gojo' || activeCharacterType === 'Megumi' || activeCharacterType === 'Hakari' || activeCharacterType === 'Sukuna') {
           dashSpeed *= 1.25; // 25% farther
         }
         

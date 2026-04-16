@@ -5,6 +5,7 @@ import { Particle } from './Particle';
 import { E_COST, Q_COST } from './Constants';
 import { CharacterType, Vector2 } from './Types';
 import { InputManager } from './InputManager';
+import { soundManager } from './SoundManager';
 
 type AIState = 'IDLE' | 'APPROACH' | 'RETREAT' | 'ATTACK_E' | 'ATTACK_Q' | 'BAIT' | 'DESPERATION' | 'DOMAIN';
 
@@ -290,7 +291,7 @@ export class Abonant extends Entity {
       case 'ATTACK_Q':
         const activeCharacterTypeQ = this.mimicryTarget || this.characterType;
         if (this.energy >= Q_COST && this.cooldowns.q <= 0 && !this.qDisabled) {
-          if (activeCharacterTypeQ === 'Sukuna') {
+          if (activeCharacterTypeQ === 'Sukuna' && isSukunaDomainActive) {
             this.energy -= Q_COST;
             this.cooldowns.q = 2000; // 2 seconds cooldown
             
@@ -313,7 +314,7 @@ export class Abonant extends Entity {
             this.cooldowns.q = 1500;
             this.phaseTimer = 15 * 16.66;
             let dashSpeed = 20;
-            if (activeCharacterTypeQ === 'Gojo' || activeCharacterTypeQ === 'Megumi' || activeCharacterTypeQ === 'Hakari') {
+            if (activeCharacterTypeQ === 'Gojo' || activeCharacterTypeQ === 'Megumi' || activeCharacterTypeQ === 'Hakari' || activeCharacterTypeQ === 'Sukuna') {
               dashSpeed *= 1.25;
             }
             
