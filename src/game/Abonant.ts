@@ -302,17 +302,24 @@ export class Abonant extends Entity {
             this.energy -= Q_COST;
             this.cooldowns.q = 1000; // 1 second cooldown (reduced by 50%)
             
-            // Sure-hit effect: Massive vertical slash perfectly on the target (player)
+            // Sure-hit effect: Massive slash from random angle
             let targetX = this.pos.x + this.width / 2;
+            let targetY = this.pos.y + this.height / 2;
             if (this.target) {
               targetX = this.target.pos.x + this.target.width / 2;
+              targetY = this.target.pos.y + this.target.height / 2;
             }
             
             const projWidth = 20 + 150;
-            const startX = targetX - projWidth / 2;
-            const startY = this.target ? this.target.pos.y - 1000 : -1000;
-            const vx = 0;
-            const vy = 160;
+            const theta = Math.random() * Math.PI * 2;
+            const R = 1500;
+            
+            const startX = targetX - Math.cos(theta) * R - projWidth / 2;
+            const startY = targetY - Math.sin(theta) * R - projWidth / 2;
+            
+            const speed = 160;
+            const vx = Math.cos(theta) * speed;
+            const vy = Math.sin(theta) * speed;
             
             projectiles.push(new Projectile(
               startX, startY, vx, vy, this.id, '#ff0000', 'Q', 'Sukuna',
@@ -324,7 +331,7 @@ export class Abonant extends Entity {
             // Pre-fire impact/blood particles
             for (let i = 0; i < 20; i++) {
               particles.push(new Particle(
-                targetX + (Math.random() - 0.5) * 80, (this.target ? this.target.pos.y : this.pos.y) - 200 + (Math.random() * 800),
+                targetX + (Math.random() - 0.5) * 80, targetY + (Math.random() - 0.5) * 80,
                 0, Math.random() * 20,
                 300, '#ff0000', 8 + Math.random() * 10
               ));

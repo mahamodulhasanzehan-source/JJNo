@@ -96,15 +96,19 @@ export class Projectile {
       ctx.arc(x + this.width/2, y + this.height/2, this.height/4, 0, Math.PI*2);
       ctx.fill();
     } else if (this.variant === 'world_slash') {
+      const angle = Math.atan2(this.vel.y, this.vel.x);
+      ctx.translate(x + this.width / 2, y + this.height / 2);
+      ctx.rotate(angle);
+      
       ctx.strokeStyle = '#ffffff'; // Outer bright aura
       ctx.shadowColor = '#ff0000';
       ctx.shadowBlur = 30;
       ctx.lineWidth = 20;
       
       ctx.beginPath();
-      // Massive vertical slash
-      ctx.moveTo(x + this.width / 2, y - 600); // Reaches incredibly high up
-      ctx.lineTo(x + this.width / 2, y + 600); // Reaches incredibly far down
+      // Massive slash parallel to its direction of travel, covering the screen
+      ctx.moveTo(-1500, 0);
+      ctx.lineTo(1500, 0);
       ctx.stroke();
       
       // Pure black reality-splitting core

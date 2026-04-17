@@ -818,16 +818,16 @@ export class GameEngine {
       // Collision with entities
       const pRect = p.getRect();
       if (p.ownerId !== this.player.id && this.checkCollision(pRect, this.player.getRect())) {
-        let damage = E_DMG + p.damageOverride;
+        let damage = p.characterType === 'Sukuna' ? (4 + p.damageOverride) / 3 : E_DMG + p.damageOverride;
+        
         if (p.characterType === 'Sukuna') {
-          if (p.abilityType === 'E') {
-            damage = 4; // Base total damage per slash is 4 (so ~40 per E string)
-            // If in his domain, reduce that base E damage by 30%
-            if (isDomainActive && this.domainManager.type === 'Sukuna' && this.domainManager.ownerId === p.ownerId) {
-              damage = damage * 0.7; 
-            }
+          if (p.abilityType === 'E' && isDomainActive && this.domainManager.type === 'Sukuna' && this.domainManager.ownerId === p.ownerId) {
+            damage = damage * 0.7; // Reduce E damage by 30% in domain
+          } else if (p.abilityType === 'Q' && isDomainActive && this.domainManager.type === 'Sukuna' && this.domainManager.ownerId === p.ownerId) {
+            damage = damage * 0.5; // Reduce Q damage by 50% in domain
           }
         }
+
         if (p.characterType === 'Megumi') damage -= 3;
         if (p.variant === 'elephant') damage = 15;
         
@@ -873,16 +873,16 @@ export class GameEngine {
           p.active = false;
         }
       } else if (p.ownerId !== this.abonant.id && this.checkCollision(pRect, this.abonant.getRect())) {
-        let damage = E_DMG + p.damageOverride;
+        let damage = p.characterType === 'Sukuna' ? (4 + p.damageOverride) / 3 : E_DMG + p.damageOverride;
+        
         if (p.characterType === 'Sukuna') {
-          if (p.abilityType === 'E') {
-            damage = 4; // Base total damage per slash is 4 (so ~40 per E string)
-            // If in his domain, reduce that base E damage by 30%
-            if (isDomainActive && this.domainManager.type === 'Sukuna' && this.domainManager.ownerId === p.ownerId) {
-              damage = damage * 0.7; 
-            }
+          if (p.abilityType === 'E' && isDomainActive && this.domainManager.type === 'Sukuna' && this.domainManager.ownerId === p.ownerId) {
+            damage = damage * 0.7; // Reduce E damage by 30% in domain
+          } else if (p.abilityType === 'Q' && isDomainActive && this.domainManager.type === 'Sukuna' && this.domainManager.ownerId === p.ownerId) {
+            damage = damage * 0.5; // Reduce Q damage by 50% in domain
           }
         }
+
         if (p.characterType === 'Megumi') damage -= 3;
         if (p.variant === 'elephant') damage = 15;
         

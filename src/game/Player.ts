@@ -118,17 +118,24 @@ export class Player extends Entity {
         this.energy -= Q_COST;
         this.cooldowns.q = 1000; // 1 second cooldown (reduced by 50%)
         
-        // Sure-hit effect: Massive slash dropping perfectly vertical onto the target's position
+        // Sure-hit effect: Massive slash coming from a random angle crossing target
         let targetX = this.pos.x + this.width / 2;
+        let targetY = this.pos.y + this.height / 2;
         if (target) {
           targetX = target.pos.x + target.width / 2;
+          targetY = target.pos.y + target.height / 2;
         }
 
         const projWidth = 20 + 150; // Size override is 150
-        const startX = targetX - projWidth / 2; // Perfectly centered on target
-        const startY = target.pos.y - 1000; // Spawn 1000 pixels above target
-        const vx = 0;
-        const vy = 160; // 160 velocity per 16.66ms ≈ 9600 pixels/sec. Will cross 1000 pixels in ~0.1 seconds!
+        const theta = Math.random() * Math.PI * 2;
+        const R = 1500;
+        
+        const startX = targetX - Math.cos(theta) * R - projWidth / 2;
+        const startY = targetY - Math.sin(theta) * R - projWidth / 2;
+        
+        const speed = 160; 
+        const vx = Math.cos(theta) * speed;
+        const vy = Math.sin(theta) * speed;
         
         projectiles.push(new Projectile(
           startX, startY, vx, vy, this.id, '#ff0000', 'Q', 'Sukuna',
@@ -140,7 +147,7 @@ export class Player extends Entity {
         // Pre-fire impact/blood particles marking the sure-hit
         for (let i = 0; i < 20; i++) {
           particles.push(new Particle(
-            targetX + (Math.random() - 0.5) * 80, target.pos.y - 200 + (Math.random() * 800),
+            targetX + (Math.random() - 0.5) * 80, targetY + (Math.random() - 0.5) * 80,
             0, Math.random() * 20,
             600, '#ff0000', 8 + Math.random() * 10
           ));
