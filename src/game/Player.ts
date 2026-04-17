@@ -6,6 +6,8 @@ import { Particle } from './Particle';
 import { soundManager } from './SoundManager';
 import { handlePlayerMovement } from '../systems/movement';
 import { Vector2 } from './Types';
+import { fireSukunaE } from '../entities/sukuna/sukuna_E';
+import { fireSukunaQDomain } from '../entities/sukuna/sukuna_Q';
 
 export class Player extends Entity {
   input: InputManager;
@@ -57,22 +59,7 @@ export class Player extends Entity {
           const chargeTime = this.eChargeTimer;
           this.eChargeTimer = 0;
           
-          const isFuga = chargeTime >= 1000;
-          const bonusDamage = Math.floor(chargeTime / 500) * 7;
-          const bonusSize = Math.floor(chargeTime / 500) * 20;
-          
-          const centerX = this.pos.x + this.width / 2;
-          const centerY = this.pos.y + this.height / 2;
-          const vx = (this.facingRight ? 15 : -15) * 1.5;
-          const vy = 0;
-          const projColor = isFuga ? '#ff4500' : '#ff0000';
-          
-          projectiles.push(new Projectile(centerX, centerY, vx, vy, this.id, projColor, 'E', activeCharacterType, bonusDamage, bonusSize, isFuga ? 'fuga' : 'normal'));
-          soundManager.playBlast();
-          
-          for(let i=0; i<15; i++) {
-            particles.push(new Particle(centerX, centerY, (Math.random() - 0.5) * 15 + vx, (Math.random() - 0.5) * 15 + vy, 400, projColor, 6));
-          }
+          fireSukunaE(this, chargeTime, projectiles, particles, () => soundManager.playBlast());
         }
       } else {
         this.eChargeTimer = 0;
@@ -118,40 +105,7 @@ export class Player extends Entity {
         this.energy -= Q_COST;
         this.cooldowns.q = 1000; // 1 second cooldown (reduced by 50%)
         
-        // Sure-hit effect: Massive slash coming from a random angle crossing target
-        let targetX = this.pos.x + this.width / 2;
-        let targetY = this.pos.y + this.height / 2;
-        if (target) {
-          targetX = target.pos.x + target.width / 2;
-          targetY = target.pos.y + target.height / 2;
-        }
-
-        const projWidth = 20 + 150; // Size override is 150
-        const theta = Math.random() * Math.PI * 2;
-        const R = 1500;
-        
-        const startX = targetX - Math.cos(theta) * R - projWidth / 2;
-        const startY = targetY - Math.sin(theta) * R - projWidth / 2;
-        
-        const speed = 160; 
-        const vx = Math.cos(theta) * speed;
-        const vy = Math.sin(theta) * speed;
-        
-        projectiles.push(new Projectile(
-          startX, startY, vx, vy, this.id, '#ff0000', 'Q', 'Sukuna',
-          35, 150, 'world_slash' // 35 damage, super massive (150 bonus)
-        ));
-        soundManager.playSlash();
-        triggerShake();
-        
-        // Pre-fire impact/blood particles marking the sure-hit
-        for (let i = 0; i < 20; i++) {
-          particles.push(new Particle(
-            targetX + (Math.random() - 0.5) * 80, targetY + (Math.random() - 0.5) * 80,
-            0, Math.random() * 20,
-            600, '#ff0000', 8 + Math.random() * 10
-          ));
-        }
+        fireSukunaQDomain(this, target, projectiles, particles, () => soundManager.playSlash(), triggerShake);
       } else {
         this.energy -= Q_COST;
         this.cooldowns.q = qCooldown;

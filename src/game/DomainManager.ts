@@ -1,7 +1,12 @@
 import { CharacterType, Vector2 } from './Types';
 import { Particle } from './Particle';
-
 import { soundManager } from './SoundManager';
+import { handleHakariDomainRoll } from '../entities/hakari/hakari_C';
+import { drawSukunaDomainBackground } from '../entities/sukuna/sukuna_Style';
+import { drawGojoDomainBackground } from '../entities/gojo/gojo_Style';
+import { drawYujiDomainBackground } from '../entities/yuji/yuji_Style';
+import { drawMegumiDomainBackground } from '../entities/megumi/megumi_Style';
+import { drawHakariDomainBackground } from '../entities/hakari/hakari_Style';
 
 export class DomainManager {
   active: boolean = false;
@@ -103,25 +108,17 @@ export class DomainManager {
       }
     } else if (this.type === 'Hakari') {
       if (this.hakariState === 'rolling') {
-        this.hakariRollTimer -= dt;
-        if (Math.random() > 0.95) soundManager.playSlotRoll();
-        if (this.hakariRollTimer <= 0) {
-          this.hakariState = 'jackpot';
-          this.hakariShowTimer = 2000;
-          soundManager.playJackpot();
-          
-          const allBuffs = ['infinite_ce', 'invulnerable', 'mimicry'];
-          let availableBuffs = allBuffs.filter(b => !this.hakariUsedBuffs.includes(b));
-          
-          if (availableBuffs.length === 0) {
-            this.hakariUsedBuffs = [];
-            availableBuffs = allBuffs;
-          }
-          
-          const rollIndex = Math.floor(Math.random() * availableBuffs.length);
-          this.hakariBuff = availableBuffs[rollIndex] as any;
-          this.hakariUsedBuffs.push(this.hakariBuff!);
-        }
+        this.hakariRollTimer = handleHakariDomainRoll(
+          dt,
+          this.hakariRollTimer,
+          this.hakariUsedBuffs,
+          (s) => this.hakariState = s,
+          (t) => this.hakariShowTimer = t,
+          (b) => this.hakariBuff = b,
+          (arr) => this.hakariUsedBuffs = arr,
+          () => soundManager.playSlotRoll(),
+          () => soundManager.playJackpot()
+        );
       } else if (this.hakariState === 'jackpot') {
         this.hakariShowTimer -= dt;
       }

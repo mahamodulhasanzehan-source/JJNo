@@ -6,6 +6,8 @@ import { E_COST, Q_COST } from './Constants';
 import { CharacterType, Vector2 } from './Types';
 import { InputManager } from './InputManager';
 import { soundManager } from './SoundManager';
+import { fireSukunaE } from '../entities/sukuna/sukuna_E';
+import { fireSukunaQDomain } from '../entities/sukuna/sukuna_Q';
 
 type AIState = 'IDLE' | 'APPROACH' | 'RETREAT' | 'ATTACK_E' | 'ATTACK_Q' | 'BAIT' | 'DESPERATION' | 'DOMAIN';
 
@@ -244,17 +246,10 @@ export class Abonant extends Entity {
               if (this.eChargeTimer >= this.aiChargeTarget) {
                 this.energy -= E_COST;
                 this.cooldowns.e = 800 * 0.75;
-                const isFuga = this.eChargeTimer >= 1000;
-                const bonusDamage = Math.floor(this.eChargeTimer / 500) * 7;
-                const bonusSize = Math.floor(this.eChargeTimer / 500) * 20;
-                const vx = (this.facingRight ? 15 : -15) * 1.5;
-                const projColor = isFuga ? '#ff4500' : '#ff0000';
-                projectiles.push(new Projectile(
-                  this.pos.x + (this.facingRight ? this.width : -20), this.pos.y + 20, 
-                  vx, 0, this.id, projColor, 'E', activeCharacterTypeE,
-                  bonusDamage, bonusSize, isFuga ? 'fuga' : 'normal'
-                ));
+                const chargeTime = this.eChargeTimer;
                 this.eChargeTimer = 0;
+                
+                fireSukunaE(this, chargeTime, projectiles, particles, () => soundManager.playBlast());
                 this.state = 'IDLE';
               }
             } else {
@@ -303,40 +298,7 @@ export class Abonant extends Entity {
             this.energy -= Q_COST;
             this.cooldowns.q = 1000; // 1 second cooldown (reduced by 50%)
             
-            // Sure-hit effect: Massive slash from random angle
-            let targetX = this.pos.x + this.width / 2;
-            let targetY = this.pos.y + this.height / 2;
-            if (this.target) {
-              targetX = this.target.pos.x + this.target.width / 2;
-              targetY = this.target.pos.y + this.target.height / 2;
-            }
-            
-            const projWidth = 20 + 150;
-            const theta = Math.random() * Math.PI * 2;
-            const R = 1500;
-            
-            const startX = targetX - Math.cos(theta) * R - projWidth / 2;
-            const startY = targetY - Math.sin(theta) * R - projWidth / 2;
-            
-            const speed = 160;
-            const vx = Math.cos(theta) * speed;
-            const vy = Math.sin(theta) * speed;
-            
-            projectiles.push(new Projectile(
-              startX, startY, vx, vy, this.id, '#ff0000', 'Q', 'Sukuna',
-              35, 150, 'world_slash' // 35 damage, massive size (150 bonus)
-            ));
-            soundManager.playSlash();
-            triggerShake();
-
-            // Pre-fire impact/blood particles
-            for (let i = 0; i < 20; i++) {
-              particles.push(new Particle(
-                targetX + (Math.random() - 0.5) * 80, targetY + (Math.random() - 0.5) * 80,
-                0, Math.random() * 20,
-                300, '#ff0000', 8 + Math.random() * 10
-              ));
-            }
+            fireSukunaQDomain(this, this.target, projectiles, particles, () => soundManager.playSlash(), triggerShake);
             
             this.vel.x = 0;
             this.state = 'IDLE';
