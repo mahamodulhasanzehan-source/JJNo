@@ -176,8 +176,8 @@ export class Abonant extends Entity {
       }
     }
 
-    // Block abilities in enemy domain
-    if (isEnemyDomainActive && (this.state === 'ATTACK_E' || this.state === 'ATTACK_Q' || this.state === 'DOMAIN' || this.state === 'DESPERATION')) {
+    // Block abilities in enemy domain (but allow DOMAIN overriding if possible)
+    if (isEnemyDomainActive && (this.state === 'ATTACK_E' || this.state === 'ATTACK_Q' || this.state === 'DESPERATION')) {
       this.state = 'APPROACH';
     }
   }
@@ -308,12 +308,14 @@ export class Abonant extends Entity {
               targetX = this.target.pos.x + this.target.width / 2;
             }
             
-            const startY = -600;
+            const projWidth = 20 + 150;
+            const startX = targetX - projWidth / 2;
+            const startY = this.target ? this.target.pos.y - 1000 : -1000;
             const vx = 0;
-            const vy = 50;
+            const vy = 160;
             
             projectiles.push(new Projectile(
-              targetX, startY, vx, vy, this.id, '#ff0000', 'Q', 'Sukuna',
+              startX, startY, vx, vy, this.id, '#ff0000', 'Q', 'Sukuna',
               35, 150, 'world_slash' // 35 damage, massive size (150 bonus)
             ));
             soundManager.playSlash();
@@ -322,7 +324,7 @@ export class Abonant extends Entity {
             // Pre-fire impact/blood particles
             for (let i = 0; i < 20; i++) {
               particles.push(new Particle(
-                targetX + (Math.random() - 0.5) * 80, -200 + (Math.random() * 800),
+                targetX + (Math.random() - 0.5) * 80, (this.target ? this.target.pos.y : this.pos.y) - 200 + (Math.random() * 800),
                 0, Math.random() * 20,
                 300, '#ff0000', 8 + Math.random() * 10
               ));

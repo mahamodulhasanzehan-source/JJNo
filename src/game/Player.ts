@@ -124,12 +124,14 @@ export class Player extends Entity {
           targetX = target.pos.x + target.width / 2;
         }
 
-        const startY = -600; // Spawn high off-screen
+        const projWidth = 20 + 150; // Size override is 150
+        const startX = targetX - projWidth / 2; // Perfectly centered on target
+        const startY = target.pos.y - 1000; // Spawn 1000 pixels above target
         const vx = 0;
-        const vy = 50; // Falls very fast down
+        const vy = 160; // 160 velocity per 16.66ms ≈ 9600 pixels/sec. Will cross 1000 pixels in ~0.1 seconds!
         
         projectiles.push(new Projectile(
-          targetX, startY, vx, vy, this.id, '#ff0000', 'Q', 'Sukuna',
+          startX, startY, vx, vy, this.id, '#ff0000', 'Q', 'Sukuna',
           35, 150, 'world_slash' // 35 damage, super massive (150 bonus)
         ));
         soundManager.playSlash();
@@ -138,7 +140,7 @@ export class Player extends Entity {
         // Pre-fire impact/blood particles marking the sure-hit
         for (let i = 0; i < 20; i++) {
           particles.push(new Particle(
-            targetX + (Math.random() - 0.5) * 80, -200 + (Math.random() * 800),
+            targetX + (Math.random() - 0.5) * 80, target.pos.y - 200 + (Math.random() * 800),
             0, Math.random() * 20,
             600, '#ff0000', 8 + Math.random() * 10
           ));
