@@ -818,13 +818,20 @@ export class GameEngine {
       // Collision with entities
       const pRect = p.getRect();
       if (p.ownerId !== this.player.id && this.checkCollision(pRect, this.player.getRect())) {
-        let damage = p.characterType === 'Sukuna' ? (4 + p.damageOverride) / 3 : E_DMG + p.damageOverride;
-        
+        let damage = E_DMG + p.damageOverride;
+        if (p.abilityType === 'Q') damage = Q_DMG + p.damageOverride;
+
         if (p.characterType === 'Sukuna') {
-          if (p.abilityType === 'E' && isDomainActive && this.domainManager.type === 'Sukuna' && this.domainManager.ownerId === p.ownerId) {
-            damage = damage * 0.7; // Reduce E damage by 30% in domain
-          } else if (p.abilityType === 'Q' && isDomainActive && this.domainManager.type === 'Sukuna' && this.domainManager.ownerId === p.ownerId) {
-            damage = damage * 0.5; // Reduce Q damage by 50% in domain
+          if (p.abilityType === 'E' || p.abilityType === 'DOMAIN_E' || p.variant === 'omni_cleave') {
+            damage = (4 + p.damageOverride) / 3;
+            if (isDomainActive && this.domainManager.type === 'Sukuna' && this.domainManager.ownerId === p.ownerId) {
+              damage *= 0.7; // Reduce E damage by 30% in domain
+            }
+          } else if (p.abilityType === 'Q' || p.variant === 'world_slash') {
+            damage = Q_DMG + p.damageOverride; // Ensure base Q damage + override
+            if (isDomainActive && this.domainManager.type === 'Sukuna' && this.domainManager.ownerId === p.ownerId) {
+              damage *= 0.5; // Reduce Q damage by 50% in domain
+            }
           }
         }
 
@@ -873,13 +880,20 @@ export class GameEngine {
           p.active = false;
         }
       } else if (p.ownerId !== this.abonant.id && this.checkCollision(pRect, this.abonant.getRect())) {
-        let damage = p.characterType === 'Sukuna' ? (4 + p.damageOverride) / 3 : E_DMG + p.damageOverride;
-        
+        let damage = E_DMG + p.damageOverride;
+        if (p.abilityType === 'Q') damage = Q_DMG + p.damageOverride;
+
         if (p.characterType === 'Sukuna') {
-          if (p.abilityType === 'E' && isDomainActive && this.domainManager.type === 'Sukuna' && this.domainManager.ownerId === p.ownerId) {
-            damage = damage * 0.7; // Reduce E damage by 30% in domain
-          } else if (p.abilityType === 'Q' && isDomainActive && this.domainManager.type === 'Sukuna' && this.domainManager.ownerId === p.ownerId) {
-            damage = damage * 0.5; // Reduce Q damage by 50% in domain
+          if (p.abilityType === 'E' || p.abilityType === 'DOMAIN_E' || p.variant === 'omni_cleave') {
+            damage = (4 + p.damageOverride) / 3;
+            if (isDomainActive && this.domainManager.type === 'Sukuna' && this.domainManager.ownerId === p.ownerId) {
+              damage *= 0.7; // Reduce E damage by 30% in domain
+            }
+          } else if (p.abilityType === 'Q' || p.variant === 'world_slash') {
+            damage = Q_DMG + p.damageOverride; // Ensure base Q damage + override
+            if (isDomainActive && this.domainManager.type === 'Sukuna' && this.domainManager.ownerId === p.ownerId) {
+              damage *= 0.5; // Reduce Q damage by 50% in domain
+            }
           }
         }
 

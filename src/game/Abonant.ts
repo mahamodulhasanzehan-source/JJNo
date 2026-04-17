@@ -17,13 +17,14 @@ export class Abonant extends Entity {
   input?: InputManager;
 
   constructor(id: string, x: number, y: number, input?: InputManager) {
-    const types: CharacterType[] = ['Gojo', 'Sukuna', 'Yuji', 'Megumi'];
+    const types: CharacterType[] = ['Gojo', 'Sukuna', 'Yuji', 'Megumi', 'Hakari'];
     const randomType = types[Math.floor(Math.random() * types.length)];
     const colors = {
       'Gojo': '#8a2be2',
       'Sukuna': '#e74c3c',
       'Yuji': '#ff6b6b',
-      'Megumi': '#00008b'
+      'Megumi': '#00008b',
+      'Hakari': '#ffd700'
     };
     super(id, x, y, randomType, colors[randomType]);
     this.input = input;
