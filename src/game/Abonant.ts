@@ -300,7 +300,7 @@ export class Abonant extends Entity {
         if (this.energy >= Q_COST && this.cooldowns.q <= 0 && !this.qDisabled) {
           if (activeCharacterTypeQ === 'Sukuna' && isSukunaDomainActive) {
             this.energy -= Q_COST;
-            this.cooldowns.q = 2000; // 2 seconds cooldown
+            this.cooldowns.q = 1000; // 1 second cooldown (reduced by 50%)
             
             // Sure-hit effect: Massive vertical slash perfectly on the target (player)
             let targetX = this.pos.x + this.width / 2;

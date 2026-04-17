@@ -116,7 +116,7 @@ export class Player extends Entity {
     if (isKeyDown('q') && this.cooldowns.q <= 0 && this.energy >= Q_COST && this.stunTimer <= 0 && !this.qDisabled) {
       if (activeCharacterType === 'Sukuna' && isSukunaDomainActive) {
         this.energy -= Q_COST;
-        this.cooldowns.q = 2000; // 2 seconds cooldown
+        this.cooldowns.q = 1000; // 1 second cooldown (reduced by 50%)
         
         // Sure-hit effect: Massive slash dropping perfectly vertical onto the target's position
         let targetX = this.pos.x + this.width / 2;
