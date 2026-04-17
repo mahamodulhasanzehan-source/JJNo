@@ -98,23 +98,27 @@ export class Projectile {
     } else if (this.variant === 'world_slash') {
       const angle = Math.atan2(this.vel.y, this.vel.x);
       ctx.translate(x + this.width / 2, y + this.height / 2);
+      // Rotate completely perfectly to face the angle
       ctx.rotate(angle);
       
       ctx.strokeStyle = '#ffffff'; // Outer bright aura
       ctx.shadowColor = '#ff0000';
-      ctx.shadowBlur = 30;
-      ctx.lineWidth = 20;
+      ctx.shadowBlur = 50;
+      ctx.lineWidth = 40;
       
       ctx.beginPath();
-      // Massive slash parallel to its direction of travel, covering the screen
-      ctx.moveTo(-1500, 0);
-      ctx.lineTo(1500, 0);
+      // Massive perpendicular cutting wave covering the entire screen, curved like a crescent blade
+      ctx.moveTo(-200, -2500);
+      ctx.quadraticCurveTo(300, 0, -200, 2500);
       ctx.stroke();
       
       // Pure black reality-splitting core
       ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 8;
+      ctx.lineWidth = 15;
       ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.moveTo(-200, -2500);
+      ctx.quadraticCurveTo(300, 0, -200, 2500);
       ctx.stroke();
     } else if (this.variant === 'omni_cleave') {
       ctx.strokeStyle = '#ff0000';
