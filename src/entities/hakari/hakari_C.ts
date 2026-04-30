@@ -19,20 +19,21 @@ export function handleHakariDomainRoll(
     playJackpot();
     
     const allBuffs = ['infinite_ce', 'invulnerable', 'mimicry'];
-    let availableBuffs = allBuffs.filter(b => !hakariUsedBuffs.includes(b));
     let newUsedBuffs = [...hakariUsedBuffs];
+    let chosenBuff: 'infinite_ce' | 'invulnerable' | 'mimicry';
     
-    if (availableBuffs.length === 0) {
-      newUsedBuffs = [];
-      availableBuffs = allBuffs;
+    if (hakariUsedBuffs.length >= 3) {
+      const rollIndex = Math.floor(Math.random() * allBuffs.length);
+      chosenBuff = allBuffs[rollIndex] as 'infinite_ce' | 'invulnerable' | 'mimicry';
+    } else {
+      const availableBuffs = allBuffs.filter(b => !hakariUsedBuffs.includes(b));
+      const rollIndex = Math.floor(Math.random() * availableBuffs.length);
+      chosenBuff = availableBuffs[rollIndex] as 'infinite_ce' | 'invulnerable' | 'mimicry';
+      newUsedBuffs.push(chosenBuff);
+      setHakariUsedBuffs(newUsedBuffs);
     }
     
-    const rollIndex = Math.floor(Math.random() * availableBuffs.length);
-    const chosenBuff = availableBuffs[rollIndex] as 'infinite_ce' | 'invulnerable' | 'mimicry';
-    
     setHakariBuff(chosenBuff);
-    newUsedBuffs.push(chosenBuff);
-    setHakariUsedBuffs(newUsedBuffs);
   }
   return newTimer;
 }

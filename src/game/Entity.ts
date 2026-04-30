@@ -155,26 +155,78 @@ export class Entity {
     const x = this.pos.x - camera.x;
     const y = this.pos.y - camera.y;
 
-    ctx.globalAlpha = this.phaseTimer > 0 ? 0.5 : 1;
+    ctx.save();
+    
+    // Dynamic drop shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath();
+    ctx.ellipse(x + this.width / 2, y + this.height, this.width / 1.5, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-    // Base body
+    // Auras based on character type or buffs
+    if (this.infiniteCeTimer > 0) {
+      ctx.shadowColor = '#f1c40f';
+      ctx.shadowBlur = 30 + Math.sin(Date.now() * 0.01) * 20;
+      ctx.strokeStyle = `rgba(241, 196, 15, ${0.5 + Math.sin(Date.now() * 0.02) * 0.5})`;
+      ctx.lineWidth = 4;
+      ctx.strokeRect(x - 5, y - 5, this.width + 10, this.height + 10);
+    } else if (this.characterType === 'Gojo' && this.energy > 50) {
+      ctx.shadowColor = '#8a2be2';
+      ctx.shadowBlur = 20;
+    } else if (this.characterType === 'Sukuna' && this.energy > 50) {
+      ctx.shadowColor = '#e74c3c';
+      ctx.shadowBlur = 20;
+    } else if (this.characterType === 'Yuji' && this.energy > 50) {
+      ctx.shadowColor = '#ff3300';
+      ctx.shadowBlur = 20;
+    }
+
+    if (this.phaseTimer > 0) {
+      // After-image dodge effect
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x - (this.vel.x * 0.05), y, this.width, this.height);
+      ctx.fillRect(x - (this.vel.x * 0.1), y, this.width, this.height);
+      ctx.globalAlpha = 0.8;
+    } else {
+      ctx.globalAlpha = 1.0;
+    }
+
+    // Base body drawing
     if (this.phaseTimer > 0) {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(x, y, this.width, this.height);
     } else {
+      ctx.shadowBlur = 0; // Turn off aura blur for the actual body painting
       if (this.characterType === 'Megumi' || this.characterType === 'Gojo') {
         ctx.fillStyle = '#1a237e'; // Dark blue cloth
         ctx.fillRect(x, y, this.width, this.height);
+        // Highlights/Folds
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.fillRect(x + 5, y, 5, this.height);
+        ctx.fillRect(x + 20, y + 10, 5, this.height - 20);
       } else if (this.characterType === 'Yuji') {
         ctx.fillStyle = '#1a237e'; // Dark blue cloth pants/bottom
         ctx.fillRect(x, y + this.height / 2, this.width, this.height / 2);
         ctx.fillStyle = '#cc0000'; // Red hoodie top
         ctx.fillRect(x, y, this.width, this.height / 2);
+        
+        ctx.fillStyle = '#aa0000'; // Hoodie shadows
+        ctx.fillRect(x, y + this.height/2 - 10, this.width, 10);
       } else if (this.characterType === 'Sukuna') {
         ctx.fillStyle = '#f5cbba'; // Bare chest (skin color)
         ctx.fillRect(x, y, this.width, this.height / 2);
         ctx.fillStyle = '#f8f8ff'; // White pants
         ctx.fillRect(x, y + this.height / 2, this.width, this.height / 2);
+        
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'; // Pants folds
+        ctx.fillRect(x + 10, y + this.height / 2, 5, this.height / 2);
+        ctx.fillRect(x + 25, y + this.height / 2, 5, this.height / 2);
+      } else if (this.characterType === 'Hakari') {
+        ctx.fillStyle = '#34495e'; // Dark coat
+        ctx.fillRect(x, y, this.width, this.height);
+        ctx.fillStyle = '#ffffff'; // White undershirt
+        ctx.fillRect(x + 10, y, 20, 30);
       } else {
         ctx.fillStyle = this.color;
         ctx.fillRect(x, y, this.width, this.height);
@@ -285,5 +337,7 @@ export class Entity {
       ctx.lineWidth = 2 + chargeRatio * 4;
       ctx.stroke();
     }
+    
+    ctx.restore();
   }
 }

@@ -323,11 +323,16 @@ export class Abonant extends Entity {
             
             this.hasHitDash = false;
             triggerShake();
-            for(let i=0; i<20; i++) {
+            for(let i=0; i<30; i++) {
               particles.push(new Particle(
                 this.pos.x + this.width/2, this.pos.y + this.height/2,
-                (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20,
-                300, this.color, 8
+                (Math.random() - 0.5) * 40 - this.vel.x * 0.8, (Math.random() - 0.5) * 40,
+                400 + Math.random() * 200, this.color, 15 + Math.random() * 15, 'line', { friction: 0.85 }
+              ));
+              particles.push(new Particle(
+                this.pos.x + this.width/2, this.pos.y + this.height/2,
+                (Math.random() - 0.5) * 60, (Math.random() - 0.5) * 60,
+                600, '#ffffff', 4 + Math.random() * 6, 'star', { friction: 0.9, scaleInOut: true, angularVel: (Math.random()-0.5)*1.5 }
               ));
             }
           }

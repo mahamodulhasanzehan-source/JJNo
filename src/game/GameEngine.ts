@@ -207,54 +207,122 @@ export class GameEngine {
   }
 
   triggerWhiteVoid(x: number, y: number) {
-    this.triggerShake(20);
-    this.chromaticAberration = 10;
-    const mult = this.graphicsMode === 'HIGH' ? 3 : 0.5;
-    for (let i = 0; i < 60 * mult; i++) {
+    this.triggerShake(35);
+    this.chromaticAberration = 40;
+    this.hitStopTimer = 50; 
+    const mult = this.graphicsMode === 'HIGH' ? 5 : 1;
+    
+    // Core explosion flash
+    for (let i = 0; i < 40 * mult; i++) {
       this.particles.push(new Particle(
-        x, y, (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 30,
-        800 + Math.random() * 400, i % 2 === 0 ? '#ffffff' : '#8a2be2', 4 + Math.random() * 8
+        x, y, (Math.random() - 0.5) * 60, (Math.random() - 0.5) * 60,
+        1500 + Math.random() * 800, 
+        Math.random() > 0.5 ? '#ffffff' : '#8a2be2', 
+        10 + Math.random() * 50,
+        'glow',
+        { friction: 0.9, scaleInOut: true }
+      ));
+    }
+    // High-velocity streaks
+    for (let i = 0; i < 30 * mult; i++) {
+      this.particles.push(new Particle(
+        x, y, (Math.random() - 0.5) * 120, (Math.random() - 0.5) * 120,
+        300 + Math.random() * 500, 
+        '#ffffff', 
+        2 + Math.random() * 5,
+        'line',
+        { friction: 0.95 }
       ));
     }
   }
 
   triggerSlashOverlay(x: number, y: number) {
-    this.triggerShake(15);
-    this.chromaticAberration = 15;
-    const mult = this.graphicsMode === 'HIGH' ? 3 : 0.5;
-    for (let i = 0; i < 40 * mult; i++) {
+    this.triggerShake(25);
+    this.chromaticAberration = 20;
+    const mult = this.graphicsMode === 'HIGH' ? 4 : 1;
+    
+    // Blood explosion
+    for (let i = 0; i < 60 * mult; i++) {
       this.particles.push(new Particle(
         x + (Math.random() - 0.5) * 60, y + (Math.random() - 0.5) * 60,
-        (Math.random() - 0.5) * 15, (Math.random() - 0.5) * 15,
-        500 + Math.random() * 300, Math.random() > 0.5 ? '#ff0000' : '#8b0000', 3 + Math.random() * 4
+        (Math.random() - 0.5) * 30, (Math.random() - 0.5) * 30,
+        800 + Math.random() * 400, 
+        Math.random() > 0.4 ? '#ff0000' : '#8b0000', 
+        5 + Math.random() * 15,
+        'circle',
+        { gravity: true, friction: 0.98, scaleInOut: true }
+      ));
+    }
+    // Dark slash marks
+    for (let i = 0; i < 15 * mult; i++) {
+      this.particles.push(new Particle(
+        x, y, (Math.random() - 0.5) * 80, (Math.random() - 0.5) * 80,
+        400 + Math.random() * 200, 
+        '#000000', 
+        10 + Math.random() * 20,
+        'arc',
+        { friction: 0.8, angularVel: (Math.random() - 0.5) * 2 }
       ));
     }
   }
 
   triggerHitSpark(x: number, y: number, color: string) {
-    const mult = this.graphicsMode === 'HIGH' ? 3 : 0.5;
-    for (let i = 0; i < 20 * mult; i++) {
+    this.triggerShake(10);
+    const mult = this.graphicsMode === 'HIGH' ? 4 : 1;
+    
+    // Core sparks
+    for (let i = 0; i < 25 * mult; i++) {
       this.particles.push(new Particle(
-        x, y, (Math.random() - 0.5) * 20, (Math.random() - 0.5) * 20,
-        300 + Math.random() * 200, color, 3 + Math.random() * 5
+        x, y, (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 40,
+        400 + Math.random() * 200, 
+        color, 
+        4 + Math.random() * 8,
+        'star',
+        { friction: 0.92, scaleInOut: true, angularVel: (Math.random() - 0.5) * 0.5 }
       ));
     }
+    
+    // Outer blast ring
+    this.particles.push(new Particle(
+      x, y, 0, 0,
+      300, 
+      color, 
+      100,
+      'arc',
+      { scaleInOut: true }
+    ));
   }
 
   triggerBlackFlash(x: number, y: number) {
-    this.hitStopTimer = 150; // 150ms hit stop
-    this.blackFlashTimer = 150;
+    this.hitStopTimer = 250; // Massively extended hit stop
+    this.blackFlashTimer = 250;
     this.blackFlashPos = { x, y };
-    this.triggerShake(30);
-    this.chromaticAberration = 25;
+    this.triggerShake(60);
+    this.chromaticAberration = 50;
     
-    const mult = this.graphicsMode === 'HIGH' ? 3 : 0.5;
-    for (let i = 0; i < 50 * mult; i++) {
+    const mult = this.graphicsMode === 'HIGH' ? 5 : 1;
+    
+    // Black & Red extreme explosion
+    for (let i = 0; i < 80 * mult; i++) {
       this.particles.push(new Particle(
-        x, y, (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 40,
-        500 + Math.random() * 300, Math.random() > 0.5 ? '#000000' : '#ff0000', 5 + Math.random() * 10
+        x, y, (Math.random() - 0.5) * 100, (Math.random() - 0.5) * 100,
+        600 + Math.random() * 500, 
+        Math.random() > 0.6 ? '#000000' : '#ff0000', 
+        10 + Math.random() * 30,
+        'rect',
+        { friction: 0.85, scaleInOut: true, angularVel: (Math.random() - 0.5) * 1.5, flicker: true }
       ));
     }
+    
+    // Massive spreading ring
+    this.particles.push(new Particle(
+        x, y, 0, 0,
+        500, 
+        '#000000', 
+        300,
+        'arc',
+        { scaleInOut: true, flicker: true }
+    ));
   }
 
   getState() {
@@ -1563,61 +1631,118 @@ export class GameEngine {
 
     // Draw Player Diamond Indicator
     this.ctx.save();
-    this.ctx.translate(this.player.pos.x + this.player.width / 2 - this.camera.x, this.player.pos.y - 30 - this.camera.y);
-    this.ctx.rotate(Math.PI / 4); // 45 degrees for diamond
-    this.ctx.fillStyle = '#3b82f6'; // Blue
-    this.ctx.fillRect(-8, -8, 16, 16);
+    this.ctx.translate(this.player.pos.x + this.player.width / 2 - this.camera.x, this.player.pos.y - 40 - Math.sin(Date.now() * 0.005) * 5 - this.camera.y);
+    this.ctx.rotate(Math.PI / 4 + Date.now() * 0.001); // 45 degrees + spin
+    this.ctx.fillStyle = 'rgba(59, 130, 246, 0.8)'; // Blue
+    this.ctx.shadowBlur = 15;
+    this.ctx.shadowColor = '#3b82f6';
+    this.ctx.fillRect(-6, -6, 12, 12);
+    this.ctx.fillStyle = '#ffffff';
+    this.ctx.fillRect(-2, -2, 4, 4);
     this.ctx.restore();
 
     // Draw Enemy Diamond Indicator
     this.ctx.save();
-    this.ctx.translate(this.abonant.pos.x + this.abonant.width / 2 - this.camera.x, this.abonant.pos.y - 30 - this.camera.y);
-    this.ctx.rotate(Math.PI / 4); // 45 degrees for diamond
-    this.ctx.fillStyle = '#ef4444'; // Red
-    this.ctx.fillRect(-8, -8, 16, 16);
+    this.ctx.translate(this.abonant.pos.x + this.abonant.width / 2 - this.camera.x, this.abonant.pos.y - 40 - Math.sin(Date.now() * 0.005 + Math.PI) * 5 - this.camera.y);
+    this.ctx.rotate(Math.PI / 4 - Date.now() * 0.001); // 45 degrees + reverse spin
+    this.ctx.fillStyle = 'rgba(239, 68, 68, 0.8)'; // Red
+    this.ctx.shadowBlur = 15;
+    this.ctx.shadowColor = '#ef4444';
+    this.ctx.fillRect(-6, -6, 12, 12);
+    this.ctx.fillStyle = '#ffffff';
+    this.ctx.fillRect(-2, -2, 4, 4);
     this.ctx.restore();
   }
 
   drawCityscape() {
     const { ctx, canvas, camera } = this;
+    const time = Date.now() * 0.001;
     
-    // Sky gradient
+    // Cyberpunk/JJK style cursed skyline
+    // Dynamic Sky gradient (changing based on time)
     const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    skyGrad.addColorStop(0, '#0a0a2a');
-    skyGrad.addColorStop(1, '#2a1a3a');
+    skyGrad.addColorStop(0, '#02000a'); // pitch black
+    skyGrad.addColorStop(0.5, '#0f0a20'); // deep purple void
+    skyGrad.addColorStop(1, '#2c1e40'); // cursed purple horizon
     ctx.fillStyle = skyGrad;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Moon
-    ctx.fillStyle = '#f1c40f';
+    // Ominous Moon with immense glow
+    ctx.save();
+    const moonX = canvas.width - 250 - camera.x * 0.02;
+    const moonY = 200;
+    
+    ctx.shadowBlur = 100;
+    ctx.shadowColor = '#8a2be2';
+    
+    const moonGrad = ctx.createRadialGradient(moonX, moonY, 10, moonX, moonY, 150);
+    moonGrad.addColorStop(0, '#ffffff');
+    moonGrad.addColorStop(0.2, '#fcf5d8');
+    moonGrad.addColorStop(0.8, 'rgba(138, 43, 226, 0.4)');
+    moonGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    
+    ctx.fillStyle = moonGrad;
     ctx.beginPath();
-    ctx.arc(canvas.width - 200 - camera.x * 0.05, 150, 60, 0, Math.PI * 2);
+    ctx.arc(moonX, moonY, 150, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
 
-    // Distant buildings (parallax 0.2)
-    ctx.fillStyle = '#1a1a2e';
-    for (let i = -5; i < 40; i++) {
-      const h = 200 + Math.sin(i * 123) * 100;
-      const w = 100 + Math.cos(i * 321) * 50;
-      const x = (i * 150) - (camera.x * 0.2);
-      ctx.fillRect(x, this.groundY - h, w, h);
+    // Distant cursed clouds
+    for (let c = 0; c < 5; c++) {
+      ctx.fillStyle = `rgba(40, 20, 60, 0.4)`;
+      const cx = (canvas.width * (c / 5) - time * 10 - camera.x * 0.05 + canvas.width * 10) % canvas.width;
+      ctx.beginPath();
+      ctx.ellipse(cx, 180 + Math.sin(c * 2 + time) * 20, 300, 40, 0, 0, Math.PI * 2);
+      ctx.fill();
     }
 
-    // Midground buildings (parallax 0.5)
-    for (let i = -5; i < 60; i++) {
-      const h = 150 + Math.sin(i * 333) * 150;
-      const w = 80 + Math.cos(i * 444) * 60;
-      const x = (i * 120) - (camera.x * 0.5);
-      ctx.fillStyle = '#16213e';
+    // Far Background Buildings (Parallax 0.1)
+    ctx.fillStyle = '#0a0515';
+    for (let i = -10; i < 60; i++) {
+        const h = 250 + Math.sin(i * 123) * 150;
+        const w = 120 + Math.cos(i * 321) * 80;
+        const x = (i * 200) - (camera.x * 0.1);
+        ctx.fillRect(x, this.groundY - h, w, h);
+    }
+
+    // Midground Buildings (Parallax 0.25)
+    for (let i = -10; i < 80; i++) {
+      const h = 200 + Math.sin(i * 333) * 250;
+      const w = 100 + Math.cos(i * 444) * 60;
+      const x = (i * 150) - (camera.x * 0.25);
+      
+      // Gradient building faces
+      const bGrad = ctx.createLinearGradient(x, this.groundY - h, x, this.groundY);
+      bGrad.addColorStop(0, '#100a20');
+      bGrad.addColorStop(1, '#05020a');
+      ctx.fillStyle = bGrad;
       ctx.fillRect(x, this.groundY - h, w, h);
       
-      // Windows
-      ctx.fillStyle = '#e94560';
-      if (Math.sin(i) > 0) {
-        ctx.fillRect(x + 20, this.groundY - h + 20, 10, 20);
-        ctx.fillRect(x + 50, this.groundY - h + 50, 10, 20);
+      // Ominous windows
+      ctx.fillStyle = (i % 3 === 0) ? '#ff0044' : '#00ffff';
+      if (Math.sin(i * Math.PI) > 0.5) {
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = ctx.fillStyle;
+        ctx.fillRect(x + 20, this.groundY - h + 30, 15, 30);
+        ctx.fillRect(x + w - 35, this.groundY - h + 80, 15, 30);
+        ctx.shadowBlur = 0;
       }
     }
+
+    // Foreground Concrete Barrier/Fence (Parallax 0.6)
+    ctx.fillStyle = '#050505';
+    for(let i = -10; i < canvas.width/100 + 10; i++) {
+        const x = (i * 200) - (camera.x * 0.6);
+        ctx.fillRect(x, this.groundY - 40, 180, 40); // Block
+        ctx.fillRect(x + 180, this.groundY - 10, 20, 10); // Gap
+    }
+    
+    // Floor
+    const floorGrad = ctx.createLinearGradient(0, this.groundY, 0, canvas.height);
+    floorGrad.addColorStop(0, '#1a1025');
+    floorGrad.addColorStop(1, '#000000');
+    ctx.fillStyle = floorGrad;
+    ctx.fillRect(0, this.groundY, canvas.width, canvas.height - this.groundY);
   }
 
   loop(time: number) {
