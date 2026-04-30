@@ -46,17 +46,22 @@ export default function App() {
         </div>
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 z-10 relative">
-          <div className="max-w-[1500px] w-full space-y-12 md:space-y-16">
+          {/* VERSION NUMBER */}
+          <div className="absolute top-6 right-8 text-zinc-500 font-mono text-sm uppercase tracking-[0.2em] font-bold z-50 opacity-80 mix-blend-plus-lighter">
+            v2.0.0 <span className="opacity-50 mx-2">|</span> DOMAIN ERA
+          </div>
+
+          <div className="max-w-[1500px] w-full space-y-12 md:space-y-16 mt-8">
             <div className="text-center space-y-2 relative">
-              <h1 className="text-7xl md:text-8xl lg:text-[10rem] font-black uppercase tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white via-gray-300 to-gray-600 drop-shadow-[0_0_30px_rgba(255,255,255,0.4)] leading-none italic z-10 relative">
+              <h1 className="text-7xl md:text-8xl lg:text-[10rem] font-black uppercase tracking-tighter text-white drop-shadow-[0_0_40px_rgba(255,255,255,0.3)] leading-none italic z-10 relative">
                 CURSED COMBAT
               </h1>
-              <p className="text-red-500 text-sm md:text-xl lg:text-2xl tracking-[0.4em] uppercase font-mono font-bold drop-shadow-[0_0_10px_rgba(255,0,0,0.8)]">
+              <p className="text-red-500 text-sm md:text-xl lg:text-2xl tracking-[0.4em] uppercase font-mono font-bold drop-shadow-[0_0_15px_rgba(255,0,0,0.8)]">
                 Select Your Vessel
               </p>
             </div>
 
-            <div className="flex flex-wrap justify-center gap-6 lg:gap-10">
+            <div className="flex flex-wrap justify-center items-center gap-6 lg:gap-10">
               <CharacterCard 
                 name="Yuji" title="The Tiger" color="hover:shadow-[0_0_80px_rgba(255,100,0,0.6)] hover:border-orange-500" glowColor="bg-orange-500" stats={{ hp: 200, ce: 100, dmg: 'High', speed: 'Med' }}
                 selected={character === 'Yuji'}
@@ -168,13 +173,17 @@ function PreparingScreen({ match, role, initialCharacter, onComplete }: { match:
   }, [timeLeft, selected, match.id, role]);
 
   return (
-    <div className="min-h-screen bg-black text-zinc-50 flex flex-col items-center justify-center p-8 font-sans">
-      <h1 className="text-4xl font-black uppercase tracking-widest text-red-500 mb-8 animate-pulse">
-        Match Found
-      </h1>
-      <p className="text-2xl mb-12">Choose your character: <span className="font-bold text-white text-4xl">{timeLeft}</span></p>
+    <div className="min-h-screen bg-[#050010] text-zinc-50 flex flex-col items-center justify-center p-8 font-sans relative overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(100,20,150,0.15)_0%,rgba(0,0,0,1)_80%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none transform perspective-[1000px] rotateX-[60deg] scale-[2.5] origin-[50%_100%] animate-[slide_4s_linear_infinite]" />
       
-      <div className="flex flex-wrap justify-center gap-4 md:gap-6 lg:gap-8 max-w-[1400px] w-full">
+      <div className="relative z-10 flex flex-col items-center flex-1 justify-center w-full max-w-[1500px]">
+        <h1 className="text-4xl md:text-5xl lg:text-7xl font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-purple-500 mb-8 animate-pulse italic">
+          Match Found
+        </h1>
+        <p className="text-xl md:text-2xl mb-12 font-mono uppercase tracking-widest">Choose your vessel: <span className="font-bold text-white text-3xl md:text-4xl">{timeLeft}</span></p>
+        
+        <div className="flex flex-wrap justify-center items-center gap-4 md:gap-6 lg:gap-10 w-full">
         <CharacterCard 
           name="Yuji" title="The Tiger" color="hover:shadow-[0_0_50px_rgba(255,204,0,0.5)] hover:border-yellow-500" glowColor="bg-yellow-500" stats={{ hp: 200, ce: 100, dmg: 'High', speed: 'Med' }}
           selected={selected === 'Yuji'}
@@ -201,6 +210,7 @@ function PreparingScreen({ match, role, initialCharacter, onComplete }: { match:
           onClick={() => { soundManager.playClick(); setSelected('Hakari'); }}
         />
       </div>
+      </div>
     </div>
   );
 }
@@ -226,11 +236,11 @@ function CharacterCard({ name, title, color, glowColor, stats, selected, onClick
       </div>
 
       {/* Content */}
-      <div className={`relative z-30 flex flex-col items-center w-full transform transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${selected ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-80 group-hover:translate-y-0 group-hover:opacity-100'}`}>
-        <h2 className="text-5xl xl:text-6xl font-black uppercase tracking-tighter mb-0 text-white text-center w-full drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] italic">{name}</h2>
-        <h3 className="text-xs md:text-sm text-zinc-400 uppercase tracking-[0.3em] mb-6 font-mono text-center drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">{title}</h3>
+      <div className={`relative z-30 flex flex-col items-center w-full transform transition-all duration-700 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${selected ? 'translate-y-0 opacity-100' : 'translate-y-8 opacity-80 group-hover:translate-y-0 group-hover:opacity-100'}`}>
+        <h2 className="text-4xl xl:text-5xl font-black uppercase tracking-tighter mb-0 text-white text-center w-full drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] italic">{name}</h2>
+        <h3 className="text-[10px] md:text-xs text-zinc-400 uppercase tracking-[0.3em] mb-4 font-mono text-center drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">{title}</h3>
         
-        <div className={`grid grid-cols-2 gap-4 w-full max-w-[180px] transition-all duration-700 delay-150 font-mono text-xs text-center border-t border-white/10 pt-6 ${selected ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0'}`}>
+        <div className={`grid grid-cols-2 gap-x-2 gap-y-4 w-full max-w-[160px] transition-all duration-700 delay-150 font-mono text-[10px] md:text-xs text-center border-t border-white/10 pt-4 ${selected ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0'}`}>
           <div className="flex flex-col items-center"><span className="text-zinc-500 mb-1">HP</span><span className="text-white font-bold">{stats.hp}</span></div>
           <div className="flex flex-col items-center"><span className="text-zinc-500 mb-1">CE</span><span className="text-white font-bold">{stats.ce}</span></div>
           <div className="flex flex-col items-center"><span className="text-zinc-500 mb-1">DMG</span><span className="text-white font-bold">{stats.dmg}</span></div>
