@@ -25,13 +25,12 @@ export function HUD({ gameState }: HUDProps) {
         </div>
         
         {/* Futuristic Skewed HP Bar */}
-        <div className="h-8 bg-black/60 border border-white/20 p-1 -skew-x-12 backdrop-blur-md relative overflow-hidden shadow-[0_0_15px_rgba(0,0,0,0.8)]">
+        <div className="w-full h-8 bg-black/60 border border-white/20 p-1 -skew-x-12 backdrop-blur-md relative overflow-hidden shadow-[0_0_15px_rgba(0,0,0,0.8)]">
           <div className="absolute inset-0 bg-red-950/40" />
           <div 
             className="h-full bg-gradient-to-r from-red-600 to-red-400 relative transition-all duration-150 ease-linear shadow-[0_0_20px_rgba(255,0,0,0.8)]"
-            style={{ width: `${(Math.max(0, gameState.playerHp) / 200) * 100}%` }}
+            style={{ width: `${Math.max(0, Math.min(100, (gameState.playerHp / 200) * 100))}%` }}
           >
-            {/* Glossy top highlight */}
             <div className="absolute top-0 left-0 w-full h-1/3 bg-white/30" />
           </div>
         </div>
@@ -39,10 +38,10 @@ export function HUD({ gameState }: HUDProps) {
         <div className="flex gap-4">
           <div className="flex-grow flex flex-col gap-1 -skew-x-12">
             <span className="text-xs text-blue-300 font-mono tracking-widest pl-2">CURSED ENERGY</span>
-            <div className="h-4 bg-black/60 border border-blue-900/50 p-0.5 overflow-hidden backdrop-blur-md">
+            <div className="w-full h-4 bg-black/60 border border-blue-900/50 p-0.5 relative overflow-hidden backdrop-blur-md">
               <div 
                 className="h-full bg-gradient-to-r from-blue-700 to-cyan-400 transition-all duration-75 relative shadow-[0_0_15px_rgba(0,150,255,0.5)]"
-                style={{ width: `${(gameState.playerEnergy / ENERGY_MAX) * 100}%` }}
+                style={{ width: `${Math.max(0, Math.min(100, (gameState.playerEnergy / ENERGY_MAX) * 100))}%` }}
               >
                  <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:20px_20px] animate-[slide_1s_linear_infinite]" />
               </div>
@@ -51,10 +50,10 @@ export function HUD({ gameState }: HUDProps) {
 
           <div className="flex-grow flex flex-col gap-1 -skew-x-12">
             <span className="text-xs text-green-300 font-mono tracking-widest pl-2">STAMINA</span>
-            <div className="h-4 bg-black/60 border border-green-900/50 p-0.5 overflow-hidden backdrop-blur-md">
+            <div className="w-full h-4 bg-black/60 border border-green-900/50 p-0.5 relative overflow-hidden backdrop-blur-md">
               <div 
                 className="h-full bg-gradient-to-r from-green-700 to-emerald-400 transition-all duration-100 relative shadow-[0_0_15px_rgba(0,255,100,0.5)]"
-                style={{ width: `${(gameState.playerStamina / STAMINA_MAX) * 100}%` }}
+                style={{ width: `${Math.max(0, Math.min(100, (gameState.playerStamina / STAMINA_MAX) * 100))}%` }}
               />
             </div>
           </div>
@@ -98,37 +97,42 @@ export function HUD({ gameState }: HUDProps) {
         </div>
         
         {/* Futuristic Skewed HP Bar (Reversed) */}
-        <div className="h-8 bg-black/60 border border-white/20 p-1 skew-x-12 backdrop-blur-md relative overflow-hidden shadow-[0_0_15px_rgba(0,0,0,0.8)]">
+        <div className="w-full h-8 bg-black/60 border border-white/20 p-1 skew-x-12 backdrop-blur-md relative overflow-hidden shadow-[0_0_15px_rgba(0,0,0,0.8)]">
           <div className="absolute inset-0 bg-red-950/40" />
-          <div 
-            className="h-full bg-gradient-to-l from-red-600 to-orange-500 relative transition-all duration-150 ease-linear float-right shadow-[0_0_20px_rgba(255,50,0,0.8)]"
-            style={{ width: `${(Math.max(0, gameState.enemyHp) / 200) * 100}%` }}
-          >
-            {/* Glossy top highlight */}
-            <div className="absolute top-0 left-0 w-full h-1/3 bg-white/30" />
+          <div className="w-full h-full flex justify-end">
+            <div 
+              className="h-full bg-gradient-to-l from-red-600 to-orange-500 relative transition-all duration-150 ease-linear shadow-[0_0_20px_rgba(255,50,0,0.8)]"
+              style={{ width: `${Math.max(0, Math.min(100, (gameState.enemyHp / 200) * 100))}%` }}
+            >
+              <div className="absolute top-0 left-0 w-full h-1/3 bg-white/30" />
+            </div>
           </div>
         </div>
 
         <div className="flex gap-4 flex-row-reverse">
           <div className="flex-grow flex flex-col gap-1 flex-row-reverse skew-x-12">
             <span className="text-xs text-blue-300 font-mono tracking-widest text-right pr-2">CURSED ENERGY</span>
-            <div className="h-4 bg-black/60 border border-blue-900/50 p-0.5 overflow-hidden backdrop-blur-md">
-              <div 
-                className="h-full bg-gradient-to-l from-blue-700 to-indigo-400 transition-all duration-75 relative float-right shadow-[0_0_15px_rgba(0,50,255,0.5)]"
-                style={{ width: `${(gameState.enemyEnergy / ENERGY_MAX) * 100}%` }}
-              >
-                 <div className="absolute inset-0 bg-[linear-gradient(-45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:20px_20px] animate-[slide_1s_linear_infinite]" />
+            <div className="w-full h-4 bg-black/60 border border-blue-900/50 p-0.5 relative overflow-hidden backdrop-blur-md">
+              <div className="w-full h-full flex justify-end">
+                <div 
+                  className="h-full bg-gradient-to-l from-blue-700 to-indigo-400 transition-all duration-75 relative shadow-[0_0_15px_rgba(0,50,255,0.5)]"
+                  style={{ width: `${Math.max(0, Math.min(100, (gameState.enemyEnergy / ENERGY_MAX) * 100))}%` }}
+                >
+                   <div className="absolute inset-0 bg-[linear-gradient(-45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:20px_20px] animate-[slide_1s_linear_infinite]" />
+                </div>
               </div>
             </div>
           </div>
 
           <div className="flex-grow flex flex-col gap-1 flex-row-reverse skew-x-12">
             <span className="text-xs text-green-300 font-mono tracking-widest text-right pr-2">STAMINA</span>
-            <div className="h-4 bg-black/60 border border-green-900/50 p-0.5 overflow-hidden backdrop-blur-md">
-              <div 
-                className="h-full bg-gradient-to-l from-green-700 to-emerald-400 transition-all duration-100 relative float-right shadow-[0_0_15px_rgba(0,255,100,0.5)]"
-                style={{ width: `${(gameState.enemyStamina / STAMINA_MAX) * 100}%` }}
-              />
+            <div className="w-full h-4 bg-black/60 border border-green-900/50 p-0.5 relative overflow-hidden backdrop-blur-md">
+              <div className="w-full h-full flex justify-end">
+                <div 
+                  className="h-full bg-gradient-to-l from-green-700 to-emerald-400 transition-all duration-100 relative shadow-[0_0_15px_rgba(0,255,100,0.5)]"
+                  style={{ width: `${Math.max(0, Math.min(100, (gameState.enemyStamina / STAMINA_MAX) * 100))}%` }}
+                />
+              </div>
             </div>
           </div>
         </div>

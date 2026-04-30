@@ -45,23 +45,23 @@ export default function App() {
           />
         </div>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 z-10 relative">
+        <div className="flex-1 flex flex-col items-center justify-center p-2 z-10 w-full h-full relative">
           {/* VERSION NUMBER */}
-          <div className="absolute top-6 right-8 text-zinc-500 font-mono text-sm uppercase tracking-[0.2em] font-bold z-50 opacity-80 mix-blend-plus-lighter">
-            v2.0.0 <span className="opacity-50 mx-2">|</span> DOMAIN ERA
+          <div className="absolute top-4 right-4 md:right-8 text-zinc-500 font-mono text-xs md:text-sm uppercase tracking-[0.2em] font-bold z-50 opacity-80 mix-blend-plus-lighter">
+            v2.0.1 <span className="opacity-50 mx-2">|</span> DOMAIN ERA
           </div>
 
-          <div className="max-w-[1500px] w-full space-y-12 md:space-y-16 mt-8">
-            <div className="text-center space-y-2 relative">
-              <h1 className="text-7xl md:text-8xl lg:text-[10rem] font-black uppercase tracking-tighter text-white drop-shadow-[0_0_40px_rgba(255,255,255,0.3)] leading-none italic z-10 relative">
+          <div className="max-w-[1500px] w-full flex flex-col h-full justify-evenly">
+            <div className="text-center space-y-0 md:space-y-2 relative flex-shrink-0 mt-4 md:mt-8">
+              <h1 className="text-5xl md:text-7xl lg:text-9xl font-black uppercase tracking-tighter text-white drop-shadow-[0_0_40px_rgba(255,255,255,0.3)] leading-none italic z-10 relative">
                 CURSED COMBAT
               </h1>
-              <p className="text-red-500 text-sm md:text-xl lg:text-2xl tracking-[0.4em] uppercase font-mono font-bold drop-shadow-[0_0_15px_rgba(255,0,0,0.8)]">
+              <p className="text-red-500 text-xs md:text-lg lg:text-xl tracking-[0.4em] uppercase font-mono font-bold drop-shadow-[0_0_15px_rgba(255,0,0,0.8)] mt-2">
                 Select Your Vessel
               </p>
             </div>
 
-            <div className="flex flex-wrap justify-center items-center gap-6 lg:gap-10">
+            <div className="flex flex-wrap justify-center items-center gap-2 md:gap-6 lg:gap-8 my-auto scale-90 md:scale-95 origin-center">
               <CharacterCard 
                 name="Yuji" title="The Tiger" color="hover:shadow-[0_0_80px_rgba(255,100,0,0.6)] hover:border-orange-500" glowColor="bg-orange-500" stats={{ hp: 200, ce: 100, dmg: 'High', speed: 'Med' }}
                 selected={character === 'Yuji'}
@@ -89,16 +89,18 @@ export default function App() {
               />
             </div>
 
-            {character && (
-              <div className="flex justify-center mt-12 animate-[fadeIn_0.5s_ease-out]">
+            {character ? (
+              <div className="flex justify-center mt-2 md:mt-6 pb-4 md:pb-8 flex-shrink-0 animate-[fadeIn_0.5s_ease-out]">
                 <button 
                   onClick={() => setPlayingLocal(true)}
-                  className="group relative px-16 py-5 bg-white text-black font-black text-2xl uppercase tracking-[0.2em] overflow-hidden transition-transform hover:scale-105 active:scale-95 shadow-[0_0_40px_rgba(255,255,255,0.4)]"
+                  className="group relative px-10 py-4 md:px-16 md:py-5 bg-white text-black font-black text-xl md:text-2xl uppercase tracking-[0.2em] overflow-hidden transition-transform hover:scale-105 active:scale-95 shadow-[0_0_40px_rgba(255,255,255,0.4)]"
                 >
                   <span className="relative z-10 transition-colors group-hover:text-red-600">ENTER DOMAIN</span>
                   <div className="absolute inset-0 bg-zinc-200 transform translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
                 </button>
               </div>
+            ) : (
+                <div className="h-[80px] md:h-[100px] mt-2 md:mt-6 pb-4 md:pb-8 opacity-0 pointer-events-none" />
             )}
           </div>
         </div>

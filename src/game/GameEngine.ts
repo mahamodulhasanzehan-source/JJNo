@@ -87,6 +87,8 @@ export class GameEngine {
     color: string;
   }[] = [];
 
+  backgroundVariant: number = 0;
+
   constructor(canvas: HTMLCanvasElement, mode: 'single' | 'multi' = 'single', role?: 'host' | 'guest') {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d')!;
@@ -94,6 +96,7 @@ export class GameEngine {
     this.opponentInput = new InputManager(false);
     this.mode = mode;
     this.role = role;
+    this.backgroundVariant = Math.floor(Math.random() * 4);
     
     this.player = new Player('player', 200, 300, this.input);
     if (mode === 'multi') {
@@ -443,6 +446,14 @@ export class GameEngine {
     const currentDomainOwner = this.domainManager.ownerId;
     this.domainManager.update(dt, this.particles);
     const isDomainActive = this.domainManager.active;
+
+    // Apply 1s burnout cooldown when a domain ends
+    if (wasDomainActive && !isDomainActive) {
+      if (this.player.cooldowns.c < 1000) this.player.cooldowns.c = 1000;
+      if (this.abonant.cooldowns.c < 1000) this.abonant.cooldowns.c = 1000;
+      // Add a visual burnout indication (gray screen flash or screen shake)
+      this.triggerShake(5);
+    }
 
     // Megumi Domain Shikigami Logic
     if (isDomainActive && this.domainManager.type === 'Megumi' && this.domainManager.shikigami) {
@@ -893,7 +904,7 @@ export class GameEngine {
           if (p.abilityType === 'E' || p.abilityType === 'DOMAIN_E' || p.variant === 'omni_cleave') {
             damage = (4 + p.damageOverride) / 3;
             if (isDomainActive && this.domainManager.type === 'Sukuna' && this.domainManager.ownerId === p.ownerId) {
-              damage *= 0.7; // Reduce E damage by 30% in domain
+              damage *= 0.75; // Reduce E damage by 25% in domain
             }
           } else if (p.abilityType === 'Q' || p.variant === 'world_slash') {
             damage = Q_DMG + p.damageOverride; // Ensure base Q damage + override
@@ -955,7 +966,7 @@ export class GameEngine {
           if (p.abilityType === 'E' || p.abilityType === 'DOMAIN_E' || p.variant === 'omni_cleave') {
             damage = (4 + p.damageOverride) / 3;
             if (isDomainActive && this.domainManager.type === 'Sukuna' && this.domainManager.ownerId === p.ownerId) {
-              damage *= 0.7; // Reduce E damage by 30% in domain
+              damage *= 0.75; // Reduce E damage by 25% in domain
             }
           } else if (p.abilityType === 'Q' || p.variant === 'world_slash') {
             damage = Q_DMG + p.damageOverride; // Ensure base Q damage + override
@@ -1658,27 +1669,56 @@ export class GameEngine {
     const { ctx, canvas, camera } = this;
     const time = Date.now() * 0.001;
     
-    // Cyberpunk/JJK style cursed skyline
+    // Choose theme based on variant
+    const themes = [
+      { // 0: Midnight Purple
+        top: '#02000a', mid: '#0f0a20', bot: '#2c1e40',
+        moonGlow: '#8a2be2', moonCenter: '#ffffff', moonCore: '#fcf5d8', moonAura: 'rgba(138, 43, 226, 0.4)',
+        cloud: 'rgba(40, 20, 60, 0.4)', bldgFar: '#0a0515', window1: '#ff0044', window2: '#00ffff'
+      },
+      { // 1: Blood Eclipse
+        top: '#050000', mid: '#2a0505', bot: '#500505',
+        moonGlow: '#ff0000', moonCenter: '#ffaaaa', moonCore: '#ff2222', moonAura: 'rgba(255, 0, 0, 0.4)',
+        cloud: 'rgba(60, 10, 10, 0.5)', bldgFar: '#110202', window1: '#ffdd00', window2: '#ff5500'
+      },
+      { // 2: Toxic Sludge (Dawn)
+        top: '#000500', mid: '#051a0b', bot: '#113a20',
+        moonGlow: '#00ff44', moonCenter: '#eaffea', moonCore: '#88ffaa', moonAura: 'rgba(0, 255, 68, 0.3)',
+        cloud: 'rgba(10, 40, 20, 0.4)', bldgFar: '#021105', window1: '#ccff00', window2: '#00ff88'
+      },
+      { // 3: Cold Night
+        top: '#000210', mid: '#05112a', bot: '#0f2250',
+        moonGlow: '#0088ff', moonCenter: '#ffffff', moonCore: '#aaddff', moonAura: 'rgba(0, 136, 255, 0.4)',
+        cloud: 'rgba(15, 30, 60, 0.4)', bldgFar: '#020815', window1: '#ffffff', window2: '#44aaff'
+      }
+    ];
+
+    const t = themes[this.backgroundVariant] || themes[0];
+    
+    // Position variance based on variant
+    const moonOffsetX = [-250, -400, canvas.width/2 - 200, canvas.width/2 + 200][this.backgroundVariant];
+    const moonOffsetY = [200, 150, 250, 100][this.backgroundVariant];
+
     // Dynamic Sky gradient (changing based on time)
     const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    skyGrad.addColorStop(0, '#02000a'); // pitch black
-    skyGrad.addColorStop(0.5, '#0f0a20'); // deep purple void
-    skyGrad.addColorStop(1, '#2c1e40'); // cursed purple horizon
+    skyGrad.addColorStop(0, t.top); // pitch black
+    skyGrad.addColorStop(0.5, t.mid); // deep purple void
+    skyGrad.addColorStop(1, t.bot); // cursed purple horizon
     ctx.fillStyle = skyGrad;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // Ominous Moon with immense glow
     ctx.save();
-    const moonX = canvas.width - 250 - camera.x * 0.02;
-    const moonY = 200;
+    const moonX = canvas.width + moonOffsetX - camera.x * 0.02;
+    const moonY = moonOffsetY;
     
     ctx.shadowBlur = 100;
-    ctx.shadowColor = '#8a2be2';
+    ctx.shadowColor = t.moonGlow;
     
     const moonGrad = ctx.createRadialGradient(moonX, moonY, 10, moonX, moonY, 150);
-    moonGrad.addColorStop(0, '#ffffff');
-    moonGrad.addColorStop(0.2, '#fcf5d8');
-    moonGrad.addColorStop(0.8, 'rgba(138, 43, 226, 0.4)');
+    moonGrad.addColorStop(0, t.moonCenter);
+    moonGrad.addColorStop(0.2, t.moonCore);
+    moonGrad.addColorStop(0.8, t.moonAura);
     moonGrad.addColorStop(1, 'rgba(0,0,0,0)');
     
     ctx.fillStyle = moonGrad;
@@ -1689,37 +1729,37 @@ export class GameEngine {
 
     // Distant cursed clouds
     for (let c = 0; c < 5; c++) {
-      ctx.fillStyle = `rgba(40, 20, 60, 0.4)`;
+      ctx.fillStyle = t.cloud;
       const cx = (canvas.width * (c / 5) - time * 10 - camera.x * 0.05 + canvas.width * 10) % canvas.width;
       ctx.beginPath();
-      ctx.ellipse(cx, 180 + Math.sin(c * 2 + time) * 20, 300, 40, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, moonOffsetY + 30 + Math.sin(c * 2 + time) * 20, 300, 40, 0, 0, Math.PI * 2);
       ctx.fill();
     }
 
     // Far Background Buildings (Parallax 0.1)
-    ctx.fillStyle = '#0a0515';
+    ctx.fillStyle = t.bldgFar;
     for (let i = -10; i < 60; i++) {
-        const h = 250 + Math.sin(i * 123) * 150;
-        const w = 120 + Math.cos(i * 321) * 80;
+        const h = 250 + Math.sin(i * 123 + this.backgroundVariant * 11) * 150;
+        const w = 120 + Math.cos(i * 321 + this.backgroundVariant * 22) * 80;
         const x = (i * 200) - (camera.x * 0.1);
         ctx.fillRect(x, this.groundY - h, w, h);
     }
 
     // Midground Buildings (Parallax 0.25)
     for (let i = -10; i < 80; i++) {
-      const h = 200 + Math.sin(i * 333) * 250;
-      const w = 100 + Math.cos(i * 444) * 60;
+      const h = 200 + Math.sin(i * 333 + this.backgroundVariant * 33) * 250;
+      const w = 100 + Math.cos(i * 444 + this.backgroundVariant * 44) * 60;
       const x = (i * 150) - (camera.x * 0.25);
       
       // Gradient building faces
       const bGrad = ctx.createLinearGradient(x, this.groundY - h, x, this.groundY);
-      bGrad.addColorStop(0, '#100a20');
+      bGrad.addColorStop(0, t.mid || '#100a20');
       bGrad.addColorStop(1, '#05020a');
       ctx.fillStyle = bGrad;
       ctx.fillRect(x, this.groundY - h, w, h);
       
       // Ominous windows
-      ctx.fillStyle = (i % 3 === 0) ? '#ff0044' : '#00ffff';
+      ctx.fillStyle = (i % 3 === 0) ? t.window1 : t.window2;
       if (Math.sin(i * Math.PI) > 0.5) {
         ctx.shadowBlur = 10;
         ctx.shadowColor = ctx.fillStyle;
