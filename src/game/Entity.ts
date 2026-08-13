@@ -46,6 +46,9 @@ export class Entity {
   
   yujiEComboTimer: number = 0;
   
+  yujiDomainEWindowTimer: number = 0;
+  yujiDomainECastCount: number = 0;
+  
   sukunaQTimer: number = 0;
   
   isDismantled: boolean = false;
@@ -129,6 +132,14 @@ export class Entity {
       this.yujiEComboTimer -= dt;
     }
 
+    if (this.yujiDomainEWindowTimer > 0) {
+      this.yujiDomainEWindowTimer -= dt;
+      if (this.yujiDomainEWindowTimer <= 0) {
+        this.yujiDomainEWindowTimer = 0;
+        this.yujiDomainECastCount = 0;
+      }
+    }
+
     // Stamina regen (not handled in combat manager to keep it simple, or we can handle it here)
     if (this.staminaPenaltyTimer <= 0 && !this.isDashing) {
       this.stamina = Math.min(STAMINA_MAX, this.stamina + STAMINA_RECOVERY_RATE * dt);
@@ -192,140 +203,282 @@ export class Entity {
       ctx.globalAlpha = 1.0;
     }
 
-    // Base body drawing
+    // Base body drawing (High Quality Simple Outfit & Texture)
     if (this.phaseTimer > 0) {
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(x, y, this.width, this.height);
+      if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(x, y, this.width, this.height, 6);
+        ctx.fill();
+      } else {
+        ctx.fillRect(x, y, this.width, this.height);
+      }
     } else {
-      ctx.shadowBlur = 0; // Turn off aura blur for the actual body painting
-      if (this.characterType === 'Megumi' || this.characterType === 'Gojo') {
-        ctx.fillStyle = '#1a237e'; // Dark blue cloth
-        ctx.fillRect(x, y, this.width, this.height);
-        // Highlights/Folds
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.fillRect(x + 5, y, 5, this.height);
-        ctx.fillRect(x + 20, y + 10, 5, this.height - 20);
+      ctx.shadowBlur = 0; // Turn off aura blur for body painting
+      
+      // Rounded Body Capsule Base
+      ctx.save();
+      ctx.beginPath();
+      if (ctx.roundRect) {
+        ctx.roundRect(x, y, this.width, this.height, 6);
+      } else {
+        ctx.rect(x, y, this.width, this.height);
+      }
+      ctx.clip();
+
+      if (this.characterType === 'Gojo' || this.characterType === 'Megumi') {
+        // High quality dark navy Jujutsu High Coat Gradient
+        const coatGrad = ctx.createLinearGradient(x, y, x, y + this.height);
+        coatGrad.addColorStop(0, '#1e293b');
+        coatGrad.addColorStop(0.5, '#0f172a');
+        coatGrad.addColorStop(1, '#020617');
+        ctx.fillStyle = coatGrad;
+        ctx.fill();
+
+        // High collar detail
+        ctx.fillStyle = '#1e1b4b';
+        ctx.fillRect(x, y + 10, this.width, 12);
+        
+        // Metallic Jujutsu Button
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath();
+        ctx.arc(x + this.width / 2, y + 28, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + this.width / 2, y + 42, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Fabric Fold Texture Highlights
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+        ctx.fillRect(x + 4, y, 3, this.height);
+        ctx.fillRect(x + this.width - 7, y, 3, this.height);
+
       } else if (this.characterType === 'Yuji') {
-        ctx.fillStyle = '#1a237e'; // Dark blue cloth pants/bottom
+        // Jujutsu Pants (Bottom half)
+        const pantsGrad = ctx.createLinearGradient(x, y + this.height/2, x, y + this.height);
+        pantsGrad.addColorStop(0, '#1e293b');
+        pantsGrad.addColorStop(1, '#020617');
+        ctx.fillStyle = pantsGrad;
         ctx.fillRect(x, y + this.height / 2, this.width, this.height / 2);
-        ctx.fillStyle = '#cc0000'; // Red hoodie top
+
+        // Red Hoodie Top (Upper half)
+        const hoodGrad = ctx.createLinearGradient(x, y, x, y + this.height/2);
+        hoodGrad.addColorStop(0, '#ef4444');
+        hoodGrad.addColorStop(1, '#991b1b');
+        ctx.fillStyle = hoodGrad;
         ctx.fillRect(x, y, this.width, this.height / 2);
-        
-        ctx.fillStyle = '#aa0000'; // Hoodie shadows
-        ctx.fillRect(x, y + this.height/2 - 10, this.width, 10);
+
+        // Hoodie Scarf / Collar Texture
+        ctx.fillStyle = '#dc2626';
+        ctx.beginPath();
+        ctx.ellipse(x + this.width/2, y + 12, this.width/2 + 2, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Zipper & Pocket Texture Line
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x + this.width/2, y + 12);
+        ctx.lineTo(x + this.width/2, y + this.height/2);
+        ctx.stroke();
+
       } else if (this.characterType === 'Sukuna') {
-        ctx.fillStyle = '#f5cbba'; // Bare chest (skin color)
-        ctx.fillRect(x, y, this.width, this.height / 2);
-        ctx.fillStyle = '#f8f8ff'; // White pants
-        ctx.fillRect(x, y + this.height / 2, this.width, this.height / 2);
-        
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'; // Pants folds
-        ctx.fillRect(x + 10, y + this.height / 2, 5, this.height / 2);
-        ctx.fillRect(x + 25, y + this.height / 2, 5, this.height / 2);
+        // Bare chest skin top
+        ctx.fillStyle = '#f5cbba';
+        ctx.fillRect(x, y, this.width, this.height * 0.45);
+
+        // Chest tattoo markings
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(x + this.width/2, y + 20, 6, 0, Math.PI);
+        ctx.stroke();
+        ctx.fillRect(x + 10, y + 14, this.width - 20, 1.5);
+
+        // White Kimono Pants
+        const kimonoGrad = ctx.createLinearGradient(x, y + this.height * 0.45, x, y + this.height);
+        kimonoGrad.addColorStop(0, '#f8fafc');
+        kimonoGrad.addColorStop(1, '#cbd5e1');
+        ctx.fillStyle = kimonoGrad;
+        ctx.fillRect(x, y + this.height * 0.45, this.width, this.height * 0.55);
+
+        // Black Sash Obi Waistband
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(x - 2, y + this.height * 0.42, this.width + 4, 8);
+
       } else if (this.characterType === 'Hakari') {
-        ctx.fillStyle = '#34495e'; // Dark coat
-        ctx.fillRect(x, y, this.width, this.height);
-        ctx.fillStyle = '#ffffff'; // White undershirt
-        ctx.fillRect(x + 10, y, 20, 30);
+        // Dark purple coat over white shirt
+        const coatGrad = ctx.createLinearGradient(x, y, x, y + this.height);
+        coatGrad.addColorStop(0, '#581c87');
+        coatGrad.addColorStop(1, '#1e1b4b');
+        ctx.fillStyle = coatGrad;
+        ctx.fill();
+
+        // White V-neck undershirt
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.moveTo(x + 10, y + 5);
+        ctx.lineTo(x + this.width / 2, y + 30);
+        ctx.lineTo(x + this.width - 10, y + 5);
+        ctx.closePath();
+        ctx.fill();
+
+        // Gold Chain
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x + this.width/2, y + 12, 8, 0, Math.PI);
+        ctx.stroke();
+
       } else {
         ctx.fillStyle = this.color;
-        ctx.fillRect(x, y, this.width, this.height);
+        ctx.fill();
       }
+
+      // Inner Edge Highlight Texture
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
     }
 
-    // Character specific details
+    // High Texture Hair & Facial Features
     if (this.characterType === 'Gojo') {
-      // Spiky white hair
+      // Spiky White Hair with Under-shading
+      ctx.fillStyle = '#e2e8f0';
+      ctx.beginPath();
+      ctx.moveTo(x - 6, y + 12);
+      ctx.lineTo(x + 2, y - 22);
+      ctx.lineTo(x + 14, y - 10);
+      ctx.lineTo(x + 24, y - 26);
+      ctx.lineTo(x + 34, y - 10);
+      ctx.lineTo(x + 44, y - 20);
+      ctx.lineTo(x + 48, y + 12);
+      ctx.fill();
+
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
-      ctx.moveTo(x - 5, y + 15);
-      ctx.lineTo(x + 5, y - 20);
-      ctx.lineTo(x + 20, y - 10);
-      ctx.lineTo(x + 35, y - 25);
-      ctx.lineTo(x + 45, y + 15);
+      ctx.moveTo(x - 3, y + 10);
+      ctx.lineTo(x + 4, y - 18);
+      ctx.lineTo(x + 15, y - 8);
+      ctx.lineTo(x + 24, y - 22);
+      ctx.lineTo(x + 33, y - 8);
+      ctx.lineTo(x + 42, y - 16);
+      ctx.lineTo(x + 45, y + 10);
       ctx.fill();
-      // Blindfold
-      ctx.fillStyle = '#111111';
-      ctx.fillRect(x - 2, y + 5, this.width + 4, 12);
+
+      // Blindfold with Subtle Blue Edge Glow
+      ctx.fillStyle = '#09090b';
+      ctx.fillRect(x - 3, y + 4, this.width + 6, 12);
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(x - 3, y + 14, this.width + 6, 1.5);
+
     } else if (this.characterType === 'Sukuna') {
-      // Spiky pink hair (swept up)
-      ctx.fillStyle = '#e68a8a';
+      // Spiky Pink Hair
+      ctx.fillStyle = '#991b1b';
       ctx.beginPath();
       ctx.moveTo(x - 5, y + 10);
-      ctx.lineTo(x + 10, y - 20);
-      ctx.lineTo(x + 25, y - 10);
-      ctx.lineTo(x + 40, y - 25);
-      ctx.lineTo(x + 45, y + 10);
+      ctx.lineTo(x + 8, y - 18);
+      ctx.lineTo(x + 20, y - 8);
+      ctx.lineTo(x + 32, y - 22);
+      ctx.lineTo(x + 44, y + 10);
       ctx.fill();
-      // Face markings
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(x + 5, y + 5, 8, 2);
-      ctx.fillRect(x + 27, y + 5, 8, 2);
-      ctx.fillRect(x + 10, y + 12, 20, 2);
-      
-      // Chest markings
-      ctx.fillRect(x + 10, y + 25, 20, 2);
-      ctx.fillRect(x + 15, y + 30, 10, 2);
+
+      ctx.fillStyle = '#f87171';
+      ctx.beginPath();
+      ctx.moveTo(x - 2, y + 8);
+      ctx.lineTo(x + 9, y - 15);
+      ctx.lineTo(x + 20, y - 6);
+      ctx.lineTo(x + 31, y - 18);
+      ctx.lineTo(x + 42, y + 8);
+      ctx.fill();
+
+      // 4 Glowing Red Eyes
+      ctx.fillStyle = '#ef4444';
+      const eyeX = this.facingRight ? x + this.width - 12 : x + 4;
+      ctx.fillRect(eyeX, y + 4, 3, 2);
+      ctx.fillRect(eyeX + 4, y + 4, 3, 2);
+      ctx.fillRect(eyeX, y + 8, 3, 1.5);
+      ctx.fillRect(eyeX + 4, y + 8, 3, 1.5);
+
     } else if (this.characterType === 'Yuji') {
-      // Spiky pink/brown hair instead of a white rectangle
-      ctx.fillStyle = '#e68a8a';
+      // Two-Tone Salmon Pink Hair
+      ctx.fillStyle = '#78350f';
       ctx.beginPath();
       ctx.moveTo(x - 5, y + 10);
-      ctx.lineTo(x + 5, y - 15);
-      ctx.lineTo(x + 15, y - 5);
-      ctx.lineTo(x + 25, y - 15);
-      ctx.lineTo(x + 35, y - 5);
-      ctx.lineTo(x + 45, y + 10);
+      ctx.lineTo(x + 6, y - 15);
+      ctx.lineTo(x + 18, y - 6);
+      ctx.lineTo(x + 30, y - 18);
+      ctx.lineTo(x + 42, y + 10);
       ctx.fill();
-      // Red hood/scarf
-      ctx.fillStyle = '#cc0000';
-      ctx.fillRect(x - 2, y + 15, this.width + 4, 10);
+
+      ctx.fillStyle = '#f87171';
+      ctx.beginPath();
+      ctx.moveTo(x - 2, y + 8);
+      ctx.lineTo(x + 7, y - 12);
+      ctx.lineTo(x + 18, y - 4);
+      ctx.lineTo(x + 29, y - 14);
+      ctx.lineTo(x + 39, y + 8);
+      ctx.fill();
+
     } else if (this.characterType === 'Megumi') {
-      // Spiky dark blue-black hair
-      ctx.fillStyle = '#0a1128';
+      // Messy Dark Blue Spiky Hair
+      ctx.fillStyle = '#020617';
       ctx.beginPath();
-      ctx.moveTo(x - 5, y + 15);
-      ctx.lineTo(x + 5, y - 20);
-      ctx.lineTo(x + 15, y - 5);
-      ctx.lineTo(x + 25, y - 25);
-      ctx.lineTo(x + 35, y - 10);
-      ctx.lineTo(x + 45, y + 15);
+      ctx.moveTo(x - 6, y + 12);
+      ctx.lineTo(x + 4, y - 20);
+      ctx.lineTo(x + 16, y - 8);
+      ctx.lineTo(x + 26, y - 24);
+      ctx.lineTo(x + 36, y - 10);
+      ctx.lineTo(x + 46, y + 12);
       ctx.fill();
-      // Tactical uniform collar
-      ctx.fillStyle = '#0a0a2a';
-      ctx.fillRect(x, y + 15, this.width, 10);
+
+      ctx.fillStyle = '#1d4ed8';
+      ctx.beginPath();
+      ctx.moveTo(x - 2, y + 10);
+      ctx.lineTo(x + 6, y - 14);
+      ctx.lineTo(x + 16, y - 5);
+      ctx.lineTo(x + 25, y - 18);
+      ctx.lineTo(x + 34, y - 7);
+      ctx.lineTo(x + 42, y + 10);
+      ctx.fill();
+
     } else if (this.characterType === 'Hakari') {
-      // Blonde hair
-      ctx.fillStyle = '#f1c40f';
+      // Styled Blonde Hair & Sunglasses
+      ctx.fillStyle = '#ca8a04';
       ctx.beginPath();
-      ctx.moveTo(x - 5, y + 10);
-      ctx.lineTo(x + 10, y - 15);
-      ctx.lineTo(x + 20, y - 5);
-      ctx.lineTo(x + 30, y - 15);
-      ctx.lineTo(x + 45, y + 10);
+      ctx.moveTo(x - 4, y + 10);
+      ctx.lineTo(x + 10, y - 16);
+      ctx.lineTo(x + 22, y - 6);
+      ctx.lineTo(x + 34, y - 18);
+      ctx.lineTo(x + 44, y + 10);
       ctx.fill();
-      
-      // Jacket
-      ctx.fillStyle = '#2c3e50';
-      ctx.fillRect(x - 2, y + 15, this.width + 4, 30);
-      
-      // Mimicry indicator
-      if (this.mimicryTarget) {
-        ctx.fillStyle = '#ff1493';
-        ctx.font = '10px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText('MIMIC', x + this.width / 2, y - 25);
-      }
+
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath();
+      ctx.moveTo(x - 1, y + 8);
+      ctx.lineTo(x + 11, y - 13);
+      ctx.lineTo(x + 22, y - 4);
+      ctx.lineTo(x + 33, y - 14);
+      ctx.lineTo(x + 41, y + 8);
+      ctx.fill();
+
+      // Sunglasses
+      ctx.fillStyle = '#18181b';
+      const sgX = this.facingRight ? x + this.width - 14 : x + 2;
+      ctx.fillRect(sgX, y + 5, 12, 6);
+      ctx.fillStyle = '#ec4899';
+      ctx.fillRect(sgX + 2, y + 7, 3, 2);
     }
 
     ctx.globalAlpha = 1;
     
-    // Direction indicator
-    ctx.fillStyle = '#000';
+    // Direction Indicator / Eye Reflection
+    ctx.fillStyle = '#38bdf8';
     if (this.facingRight) {
-      ctx.fillRect(x + this.width - 10, y + 10, 10, 10);
+      ctx.fillRect(x + this.width - 6, y + 8, 3, 3);
     } else {
-      ctx.fillRect(x, y + 10, 10, 10);
+      ctx.fillRect(x + 3, y + 8, 3, 3);
     }
 
     // Sukuna Fuga Charge Visual

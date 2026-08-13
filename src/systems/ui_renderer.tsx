@@ -13,48 +13,80 @@ interface HUDProps {
 }
 
 export function HUD({ gameState }: HUDProps) {
+  const playerHpPct = Math.max(0, Math.min(100, (gameState.playerHp / 200) * 100));
+  const enemyHpPct = Math.max(0, Math.min(100, (gameState.enemyHp / 200) * 100));
+  
+  const playerEnergyPct = Math.max(0, Math.min(100, (gameState.playerEnergy / ENERGY_MAX) * 100));
+  const enemyEnergyPct = Math.max(0, Math.min(100, (gameState.enemyEnergy / ENERGY_MAX) * 100));
+
+  const playerStaminaPct = Math.max(0, Math.min(100, (gameState.playerStamina / STAMINA_MAX) * 100));
+  const enemyStaminaPct = Math.max(0, Math.min(100, (gameState.enemyStamina / STAMINA_MAX) * 100));
+
   return (
-    <div className="absolute top-0 left-0 w-full p-8 flex justify-between items-start pointer-events-none z-10 selection:bg-transparent">
+    <div className="absolute top-0 left-0 w-full p-4 md:p-8 flex justify-between items-start pointer-events-none z-30 selection:bg-transparent">
       {/* Player Stats */}
-      <div className="w-[400px] flex flex-col gap-3">
+      <div className="w-[320px] md:w-[420px] flex flex-col gap-2">
         <div className="flex justify-between items-end mb-1">
-          <span className="text-4xl font-black text-white hover:text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.8)] tracking-tighter italic">YOU</span>
-          <span className="text-xl font-mono font-bold text-gray-200 drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]">
-            {Math.max(0, Math.floor(gameState.playerHp))} / 200
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-3xl md:text-5xl font-black text-white drop-shadow-[0_0_20px_rgba(255,255,255,0.9)] tracking-tighter italic">YOU</span>
+            <span className="text-xs px-2 py-0.5 bg-red-600/30 border border-red-500/50 text-red-300 font-mono font-bold rounded -skew-x-12">VESSEL</span>
+          </div>
+          <div className="flex items-baseline gap-1 font-mono font-bold text-gray-100 drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]">
+            <span className="text-xl md:text-2xl text-white">{Math.max(0, Math.floor(gameState.playerHp))}</span>
+            <span className="text-xs md:text-sm text-zinc-400">/ 200</span>
+          </div>
         </div>
         
         {/* Futuristic Skewed HP Bar */}
-        <div className="w-full h-8 bg-black/60 border border-white/20 p-1 -skew-x-12 backdrop-blur-md relative overflow-hidden shadow-[0_0_15px_rgba(0,0,0,0.8)]">
-          <div className="absolute inset-0 bg-red-950/40" />
+        <div className="w-full h-7 md:h-9 bg-zinc-950/90 border-2 border-red-500/40 p-1 -skew-x-12 backdrop-blur-xl relative overflow-hidden shadow-[0_0_20px_rgba(0,0,0,0.9)] rounded-sm">
+          {/* Background grid track */}
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,0,0,0.08)_1px,transparent_1px)] bg-[size:10%_100%]" />
+          {/* Fill bar */}
           <div 
-            className="h-full bg-gradient-to-r from-red-600 to-red-400 relative transition-all duration-150 ease-linear shadow-[0_0_20px_rgba(255,0,0,0.8)]"
-            style={{ width: `${Math.max(0, Math.min(100, (gameState.playerHp / 200) * 100))}%` }}
+            className="h-full bg-gradient-to-r from-red-600 via-rose-500 to-amber-400 relative transition-all duration-150 ease-out shadow-[0_0_25px_rgba(239,68,68,1)] rounded-xs"
+            style={{ width: `${playerHpPct}%` }}
           >
-            <div className="absolute top-0 left-0 w-full h-1/3 bg-white/30" />
+            <div className="absolute top-0 left-0 w-full h-2/5 bg-white/40" />
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_80%,rgba(255,255,255,0.6)_100%)]" />
           </div>
         </div>
 
-        <div className="flex gap-4">
-          <div className="flex-grow flex flex-col gap-1 -skew-x-12">
-            <span className="text-xs text-blue-300 font-mono tracking-widest pl-2">CURSED ENERGY</span>
-            <div className="w-full h-4 bg-black/60 border border-blue-900/50 p-0.5 relative overflow-hidden backdrop-blur-md">
+        <div className="grid grid-cols-2 gap-3 mt-1">
+          {/* Cursed Energy */}
+          <div className="flex flex-col gap-1 -skew-x-12">
+            <div className="flex justify-between items-center text-[10px] md:text-xs text-cyan-300 font-mono tracking-widest px-1 font-bold">
+              <span>CURSED ENERGY</span>
+              <span className="text-cyan-200">{Math.floor(gameState.playerEnergy)} CE</span>
+            </div>
+            <div className="w-full h-3 md:h-4 bg-zinc-950/90 border border-cyan-500/50 p-0.5 relative overflow-hidden backdrop-blur-md rounded-xs">
               <div 
-                className="h-full bg-gradient-to-r from-blue-700 to-cyan-400 transition-all duration-75 relative shadow-[0_0_15px_rgba(0,150,255,0.5)]"
-                style={{ width: `${Math.max(0, Math.min(100, (gameState.playerEnergy / ENERGY_MAX) * 100))}%` }}
+                className="h-full bg-gradient-to-r from-blue-600 via-cyan-400 to-sky-300 transition-all duration-75 relative shadow-[0_0_15px_rgba(6,182,212,0.9)]"
+                style={{ width: `${playerEnergyPct}%` }}
               >
-                 <div className="absolute inset-0 bg-[linear-gradient(45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:20px_20px] animate-[slide_1s_linear_infinite]" />
+                <div className="absolute top-0 left-0 w-full h-1/2 bg-white/40" />
               </div>
             </div>
           </div>
 
-          <div className="flex-grow flex flex-col gap-1 -skew-x-12">
-            <span className="text-xs text-green-300 font-mono tracking-widest pl-2">STAMINA</span>
-            <div className="w-full h-4 bg-black/60 border border-green-900/50 p-0.5 relative overflow-hidden backdrop-blur-md">
+          {/* Stamina */}
+          <div className="flex flex-col gap-1 -skew-x-12">
+            <div className="flex justify-between items-center text-[10px] md:text-xs text-emerald-300 font-mono tracking-widest px-1 font-bold">
+              <span>STAMINA</span>
+              <span className={playerStaminaPct <= 5 ? "text-amber-400 animate-pulse font-bold" : "text-emerald-200"}>
+                {playerStaminaPct <= 5 ? "RECOVERING" : `${Math.floor((gameState.playerStamina / STAMINA_MAX) * 100)}%`}
+              </span>
+            </div>
+            <div className="w-full h-3 md:h-4 bg-zinc-950/90 border border-emerald-500/50 p-0.5 relative overflow-hidden backdrop-blur-md rounded-xs">
               <div 
-                className="h-full bg-gradient-to-r from-green-700 to-emerald-400 transition-all duration-100 relative shadow-[0_0_15px_rgba(0,255,100,0.5)]"
-                style={{ width: `${Math.max(0, Math.min(100, (gameState.playerStamina / STAMINA_MAX) * 100))}%` }}
-              />
+                className={`h-full transition-all duration-100 relative shadow-[0_0_15px_rgba(34,197,94,0.9)] ${
+                  playerStaminaPct <= 5 
+                    ? "bg-gradient-to-r from-amber-600 to-red-500 animate-pulse" 
+                    : "bg-gradient-to-r from-emerald-600 via-green-400 to-lime-300"
+                }`}
+                style={{ width: `${playerStaminaPct}%` }}
+              >
+                <div className="absolute top-0 left-0 w-full h-1/2 bg-white/40" />
+              </div>
             </div>
           </div>
         </div>
@@ -62,11 +94,11 @@ export function HUD({ gameState }: HUDProps) {
 
       {/* Domain Indicator */}
       {gameState.domainActive && (
-        <div className="absolute top-12 left-1/2 -translate-x-1/2 text-center flex flex-col items-center">
+        <div className="absolute top-8 left-1/2 -translate-x-1/2 text-center flex flex-col items-center z-40">
           <motion.div 
             initial={{ scale: 2, opacity: 0, filter: 'blur(10px)' }}
             animate={{ scale: 1, opacity: 1, filter: 'blur(0px)' }}
-            className="text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400 tracking-[0.2em] uppercase drop-shadow-[0_0_20px_rgba(255,255,255,0.8)]"
+            className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white via-zinc-200 to-gray-400 tracking-[0.2em] uppercase drop-shadow-[0_0_30px_rgba(255,255,255,0.9)] italic"
           >
             DOMAIN EXPANSION
           </motion.div>
@@ -74,64 +106,86 @@ export function HUD({ gameState }: HUDProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 mt-2 tracking-widest uppercase drop-shadow-[0_0_15px_rgba(255,0,255,0.5)]"
+            className="text-2xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-500 to-red-500 mt-1 tracking-widest uppercase drop-shadow-[0_0_20px_rgba(255,0,255,0.8)] italic"
           >
             {gameState.domainType === 'Gojo' ? 'Unlimited Void' : 
              gameState.domainType === 'Sukuna' ? 'Malevolent Shrine' : 
              gameState.domainType === 'Megumi' ? 'Shadow Garden' : 
-             gameState.domainType === 'Yuji' ? 'Cursed Womb' : 'Benevolent Boxing'}
+             gameState.domainType === 'Hakari' ? 'Idle Death Gamble' : 'Cursed Domain'}
           </motion.div>
-          <div className="text-2xl font-mono font-bold text-white mt-4 bg-black/50 px-6 py-2 rounded-full border border-white/30 backdrop-blur-sm">
-            {(gameState.domainTimer / 1000).toFixed(1)}s
+          <div className="text-xl md:text-2xl font-mono font-bold text-red-400 mt-3 bg-zinc-950/90 px-6 py-1.5 rounded-full border border-red-500/50 backdrop-blur-md shadow-[0_0_20px_rgba(239,68,68,0.5)]">
+            {(gameState.domainTimer / 1000).toFixed(1)}s REMAINING
           </div>
         </div>
       )}
 
       {/* Enemy Stats */}
-      <div className="w-[400px] flex flex-col gap-3">
+      <div className="w-[320px] md:w-[420px] flex flex-col gap-2">
         <div className="flex justify-between items-end mb-1 flex-row-reverse">
-          <span className="text-4xl font-black text-red-500 drop-shadow-[0_0_15px_rgba(255,0,0,0.8)] tracking-tighter italic">ENEMY</span>
-          <span className="text-xl font-mono font-bold text-gray-200 drop-shadow-[0_0_5px_rgba(255,255,255,0.5)]">
-            {Math.max(0, Math.floor(gameState.enemyHp))} / 200
-          </span>
+          <div className="flex items-center gap-2 flex-row-reverse">
+            <span className="text-3xl md:text-5xl font-black text-red-500 drop-shadow-[0_0_20px_rgba(239,68,68,0.9)] tracking-tighter italic">ENEMY</span>
+            <span className="text-xs px-2 py-0.5 bg-purple-600/30 border border-purple-500/50 text-purple-300 font-mono font-bold rounded skew-x-12">CURSE</span>
+          </div>
+          <div className="flex items-baseline gap-1 font-mono font-bold text-gray-100 drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]">
+            <span className="text-xl md:text-2xl text-white">{Math.max(0, Math.floor(gameState.enemyHp))}</span>
+            <span className="text-xs md:text-sm text-zinc-400">/ 200</span>
+          </div>
         </div>
         
         {/* Futuristic Skewed HP Bar (Reversed) */}
-        <div className="w-full h-8 bg-black/60 border border-white/20 p-1 skew-x-12 backdrop-blur-md relative overflow-hidden shadow-[0_0_15px_rgba(0,0,0,0.8)]">
-          <div className="absolute inset-0 bg-red-950/40" />
+        <div className="w-full h-7 md:h-9 bg-zinc-950/90 border-2 border-red-500/40 p-1 skew-x-12 backdrop-blur-xl relative overflow-hidden shadow-[0_0_20px_rgba(0,0,0,0.9)] rounded-sm">
+          {/* Background grid track */}
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,0,0,0.08)_1px,transparent_1px)] bg-[size:10%_100%]" />
           <div className="w-full h-full flex justify-end">
             <div 
-              className="h-full bg-gradient-to-l from-red-600 to-orange-500 relative transition-all duration-150 ease-linear shadow-[0_0_20px_rgba(255,50,0,0.8)]"
-              style={{ width: `${Math.max(0, Math.min(100, (gameState.enemyHp / 200) * 100))}%` }}
+              className="h-full bg-gradient-to-l from-red-600 via-orange-500 to-amber-400 relative transition-all duration-150 ease-out shadow-[0_0_25px_rgba(239,68,68,1)] rounded-xs"
+              style={{ width: `${enemyHpPct}%` }}
             >
-              <div className="absolute top-0 left-0 w-full h-1/3 bg-white/30" />
+              <div className="absolute top-0 left-0 w-full h-2/5 bg-white/40" />
+              <div className="absolute inset-0 bg-[linear-gradient(-90deg,transparent_80%,rgba(255,255,255,0.6)_100%)]" />
             </div>
           </div>
         </div>
 
-        <div className="flex gap-4 flex-row-reverse">
-          <div className="flex-grow flex flex-col gap-1 flex-row-reverse skew-x-12">
-            <span className="text-xs text-blue-300 font-mono tracking-widest text-right pr-2">CURSED ENERGY</span>
-            <div className="w-full h-4 bg-black/60 border border-blue-900/50 p-0.5 relative overflow-hidden backdrop-blur-md">
+        <div className="grid grid-cols-2 gap-3 mt-1 flex-row-reverse">
+          {/* Cursed Energy */}
+          <div className="flex flex-col gap-1 skew-x-12">
+            <div className="flex justify-between items-center text-[10px] md:text-xs text-blue-300 font-mono tracking-widest px-1 font-bold flex-row-reverse">
+              <span>CURSED ENERGY</span>
+              <span className="text-blue-200">{Math.floor(gameState.enemyEnergy)} CE</span>
+            </div>
+            <div className="w-full h-3 md:h-4 bg-zinc-950/90 border border-blue-500/50 p-0.5 relative overflow-hidden backdrop-blur-md rounded-xs">
               <div className="w-full h-full flex justify-end">
                 <div 
-                  className="h-full bg-gradient-to-l from-blue-700 to-indigo-400 transition-all duration-75 relative shadow-[0_0_15px_rgba(0,50,255,0.5)]"
-                  style={{ width: `${Math.max(0, Math.min(100, (gameState.enemyEnergy / ENERGY_MAX) * 100))}%` }}
+                  className="h-full bg-gradient-to-l from-blue-600 via-indigo-400 to-sky-300 transition-all duration-75 relative shadow-[0_0_15px_rgba(59,130,246,0.9)]"
+                  style={{ width: `${enemyEnergyPct}%` }}
                 >
-                   <div className="absolute inset-0 bg-[linear-gradient(-45deg,transparent_25%,rgba(255,255,255,0.2)_50%,transparent_75%)] bg-[length:20px_20px] animate-[slide_1s_linear_infinite]" />
+                  <div className="absolute top-0 left-0 w-full h-1/2 bg-white/40" />
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex-grow flex flex-col gap-1 flex-row-reverse skew-x-12">
-            <span className="text-xs text-green-300 font-mono tracking-widest text-right pr-2">STAMINA</span>
-            <div className="w-full h-4 bg-black/60 border border-green-900/50 p-0.5 relative overflow-hidden backdrop-blur-md">
+          {/* Stamina */}
+          <div className="flex flex-col gap-1 skew-x-12">
+            <div className="flex justify-between items-center text-[10px] md:text-xs text-emerald-300 font-mono tracking-widest px-1 font-bold flex-row-reverse">
+              <span>STAMINA</span>
+              <span className={enemyStaminaPct <= 5 ? "text-amber-400 animate-pulse font-bold" : "text-emerald-200"}>
+                {enemyStaminaPct <= 5 ? "RECOVERING" : `${Math.floor((gameState.enemyStamina / STAMINA_MAX) * 100)}%`}
+              </span>
+            </div>
+            <div className="w-full h-3 md:h-4 bg-zinc-950/90 border border-emerald-500/50 p-0.5 relative overflow-hidden backdrop-blur-md rounded-xs">
               <div className="w-full h-full flex justify-end">
                 <div 
-                  className="h-full bg-gradient-to-l from-green-700 to-emerald-400 transition-all duration-100 relative shadow-[0_0_15px_rgba(0,255,100,0.5)]"
-                  style={{ width: `${Math.max(0, Math.min(100, (gameState.enemyStamina / STAMINA_MAX) * 100))}%` }}
-                />
+                  className={`h-full transition-all duration-100 relative shadow-[0_0_15px_rgba(34,197,94,0.9)] ${
+                    enemyStaminaPct <= 5 
+                      ? "bg-gradient-to-l from-amber-600 to-red-500 animate-pulse" 
+                      : "bg-gradient-to-l from-emerald-600 via-green-400 to-lime-300"
+                  }`}
+                  style={{ width: `${enemyStaminaPct}%` }}
+                >
+                  <div className="absolute top-0 left-0 w-full h-1/2 bg-white/40" />
+                </div>
               </div>
             </div>
           </div>

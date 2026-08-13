@@ -8,6 +8,7 @@ import { handlePlayerMovement } from '../systems/movement';
 import { Vector2 } from './Types';
 import { fireSukunaE } from '../entities/sukuna/sukuna_E';
 import { fireSukunaQDomain } from '../entities/sukuna/sukuna_Q';
+import { fireYujiDomainE } from '../entities/yuji/yuji_E';
 
 export class Player extends Entity {
   input: InputManager;
@@ -17,7 +18,19 @@ export class Player extends Entity {
     this.input = input;
   }
 
-  update(dt: number, groundY: number, projectiles: Projectile[], particles: Particle[], triggerShake: () => void, isYujiDomainActive: boolean = false, isMegumiDomainActive: boolean = false, isSukunaDomainActive: boolean = false, target?: Entity) {
+  update(
+    dt: number, 
+    groundY: number, 
+    projectiles: Projectile[], 
+    particles: Particle[], 
+    triggerShake: (amt?: number) => void, 
+    isYujiDomainActive: boolean = false, 
+    isMegumiDomainActive: boolean = false, 
+    isSukunaDomainActive: boolean = false, 
+    target?: Entity,
+    activeBeams?: any[],
+    visualSlashes?: any[]
+  ) {
     const energyRegenMultiplier = (isYujiDomainActive && this.characterType === 'Yuji') ? 1.5 : 1.0;
     const statsResult = this.updateStats(dt, energyRegenMultiplier);
     
@@ -66,35 +79,53 @@ export class Player extends Entity {
       }
     } else {
       if (isKeyDown('e') && this.cooldowns.e <= 0 && this.energy >= E_COST && this.stunTimer <= 0) {
-        this.energy -= E_COST;
-        this.cooldowns.e = baseECooldown;
-        
-        const centerX = this.pos.x + this.width / 2;
-        const centerY = this.pos.y + this.height / 2;
-        
-        const vx = (this.facingRight ? 15 : -15);
-        const vy = 0;
-        
-        let projColor = '#00ffff'; // Default Yuji
-        let variant = 'normal';
-        if (activeCharacterType === 'Gojo') projColor = '#8a2be2';
-        if (activeCharacterType === 'Megumi') projColor = '#00008b'; // Deep blue
-        if (activeCharacterType === 'Hakari') {
-          const isPull = Math.random() > 0.5;
-          projColor = isPull ? '#00ffff' : '#ffff00'; // Neon Blue / Yellow
-          variant = isPull ? 'pull' : 'knockback';
-        }
-        
-        projectiles.push(new Projectile(centerX, centerY, vx, vy, this.id, projColor, 'E', activeCharacterType, 0, 0, variant));
-        soundManager.playBlast();
-        
-        // Extra E particles
-        for(let i=0; i<15; i++) {
-          particles.push(new Particle(
-            centerX, centerY,
-            (Math.random() - 0.5) * 15 + vx, (Math.random() - 0.5) * 15 + vy,
-            400, projColor, 6
-          ));
+        if (isYujiDomainActive && activeCharacterType === 'Yuji') {
+          if (this.yujiDomainEWindowTimer > 0 && this.yujiDomainECastCount >= 5) {
+            // Blocked, do nothing
+          } else {
+            this.energy -= E_COST;
+            this.cooldowns.e = baseECooldown;
+            
+            if (this.yujiDomainEWindowTimer <= 0) {
+              this.yujiDomainEWindowTimer = 5000;
+              this.yujiDomainECastCount = 1;
+            } else {
+              this.yujiDomainECastCount++;
+            }
+            
+            fireYujiDomainE(this, target, particles, activeBeams || [], visualSlashes || [], triggerShake, () => soundManager.playBeam());
+          }
+        } else {
+          this.energy -= E_COST;
+          this.cooldowns.e = baseECooldown;
+          
+          const centerX = this.pos.x + this.width / 2;
+          const centerY = this.pos.y + this.height / 2;
+          
+          const vx = (this.facingRight ? 15 : -15);
+          const vy = 0;
+          
+          let projColor = '#00ffff'; // Default Yuji
+          let variant = 'normal';
+          if (activeCharacterType === 'Gojo') projColor = '#8a2be2';
+          if (activeCharacterType === 'Megumi') projColor = '#00008b'; // Deep blue
+          if (activeCharacterType === 'Hakari') {
+            const isPull = Math.random() > 0.5;
+            projColor = isPull ? '#00ffff' : '#ffff00'; // Neon Blue / Yellow
+            variant = isPull ? 'pull' : 'knockback';
+          }
+          
+          projectiles.push(new Projectile(centerX, centerY, vx, vy, this.id, projColor, 'E', activeCharacterType, 0, 0, variant));
+          soundManager.playBlast();
+          
+          // Extra E particles
+          for(let i=0; i<15; i++) {
+            particles.push(new Particle(
+              centerX, centerY,
+              (Math.random() - 0.5) * 15 + vx, (Math.random() - 0.5) * 15 + vy,
+              400, projColor, 6
+            ));
+          }
         }
       }
     }
@@ -113,6 +144,9 @@ export class Player extends Entity {
         let dashSpeed = 25;
         if (activeCharacterType === 'Gojo' || activeCharacterType === 'Megumi' || activeCharacterType === 'Hakari' || activeCharacterType === 'Sukuna') {
           dashSpeed *= 1.25; // 25% farther
+        }
+        if (isYujiDomainActive && activeCharacterType === 'Yuji') {
+          dashSpeed *= 2.0; // Dash twice as far in his domain
         }
         
         if (activeCharacterType === 'Megumi') {

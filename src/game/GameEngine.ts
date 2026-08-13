@@ -52,7 +52,18 @@ export class GameEngine {
   worldWidth: number = 2000;
 
   lastMouseDown: boolean = false;
-  activeBeams: { start: Vector2, end: Vector2, timer: number, maxTimer: number }[] = [];
+  activeBeams: { start: Vector2, end: Vector2, timer: number, maxTimer: number, color?: string }[] = [];
+  pendingYujiGhostDashes: {
+    ownerId: string;
+    targetId: string;
+    delayTimer: number;
+    initialFacingRight: boolean;
+    phase: 'WAITING' | 'DASHING';
+    dashTimer: number;
+    ghostPos: Vector2;
+    ghostVel: Vector2;
+    hasHit: boolean;
+  }[] = [];
 
   gameOver: boolean = false;
   winner: 'player' | 'abonant' | null = null;
@@ -176,11 +187,15 @@ export class GameEngine {
   }
 
   applyAbilityEffects(target: Entity, sourceCharacter: CharacterType, abilityType: 'E' | 'Q', sourceEntity: Entity) {
+    const isYujiDomainActive = this.domainManager.active && this.domainManager.type === 'Yuji';
     if (sourceCharacter === 'Yuji') {
       if (abilityType === 'E') {
         applyYujiE(target, sourceEntity);
       } else if (abilityType === 'Q') {
-        applyYujiQ(target, sourceEntity);
+        applyYujiQ(target, sourceEntity, isYujiDomainActive);
+      }
+      if (isYujiDomainActive) {
+        target.stunTimer = 0;
       }
     } else if (sourceCharacter === 'Gojo') {
       if (abilityType === 'E') {
@@ -405,6 +420,12 @@ export class GameEngine {
 
     if (this.globalImpactFrameTimer > 0) {
       this.globalImpactFrameTimer -= dt;
+    }
+    if (this.blackFlashTimer > 0) {
+      this.blackFlashTimer -= dt;
+    }
+    if (this.hitStopTimer > 0) {
+      this.hitStopTimer -= dt;
     }
 
     const mouseJustPressed = this.input.mouse.isDown && !this.lastMouseDown;
@@ -755,7 +776,19 @@ export class GameEngine {
     const isHakariFrozen = isDomainActive && currentDomainType === 'Hakari' && (this.domainManager.hakariState === 'rolling' || this.domainManager.hakariState === 'jackpot');
 
     if (!(isDomainActive && currentDomainType === 'Gojo') && !isHakariFrozen) {
-      const playerStats = this.player.update(dt, this.groundY, this.projectiles, this.particles, () => this.triggerShake(5), isDomainActive && currentDomainType === 'Yuji' && currentDomainOwner === this.player.id, isDomainActive && currentDomainType === 'Megumi', isDomainActive && currentDomainType === 'Sukuna' && currentDomainOwner === this.player.id, this.abonant);
+      const playerStats = this.player.update(
+        dt, 
+        this.groundY, 
+        this.projectiles, 
+        this.particles, 
+        () => this.triggerShake(5), 
+        isDomainActive && currentDomainType === 'Yuji' && currentDomainOwner === this.player.id, 
+        isDomainActive && currentDomainType === 'Megumi', 
+        isDomainActive && currentDomainType === 'Sukuna' && currentDomainOwner === this.player.id, 
+        this.abonant,
+        this.activeBeams,
+        this.visualSlashes
+      );
       
       const abonantStats = this.abonant.update(
         dt, 
@@ -767,7 +800,9 @@ export class GameEngine {
         isDomainActive && currentDomainType === 'Sukuna' && currentDomainOwner === this.abonant.id, 
         isDomainActive && currentDomainType === 'Yuji' && currentDomainOwner === this.abonant.id, 
         isDomainActive && currentDomainType === 'Megumi',
-        isDomainActive && currentDomainOwner === this.player.id // isEnemyDomainActive
+        isDomainActive && currentDomainOwner === this.player.id, // isEnemyDomainActive
+        this.activeBeams,
+        this.visualSlashes
       );
 
       // Megumi E Tether Logic
@@ -854,7 +889,101 @@ export class GameEngine {
       }
     }
 
-    // Update Beams (Removed as per instructions)
+    // Update Beams (e.g. Yuji Domain Laser E)
+    for (let i = this.activeBeams.length - 1; i >= 0; i--) {
+      const beam = this.activeBeams[i];
+      beam.timer -= dt;
+      if (beam.timer <= 0) {
+        this.activeBeams.splice(i, 1);
+      }
+    }
+
+    // Yuji Domain Ghost Replica Dash Triggering
+    if (isDomainActive && currentDomainType === 'Yuji') {
+      const yujiEntity = currentDomainOwner === this.player.id ? this.player : this.abonant;
+      const targetEntity = currentDomainOwner === this.player.id ? this.abonant : this.player;
+
+      if (yujiEntity.characterType === 'Yuji' || yujiEntity.mimicryTarget === 'Yuji') {
+        const isDashingNow = yujiEntity.isDashing || yujiEntity.phaseTimer > 0;
+        if (isDashingNow) {
+          if (this.checkCollision(yujiEntity.getRect(), targetEntity.getRect())) {
+            if (!(yujiEntity as any).hasTriggeredYujiGhostDash) {
+              (yujiEntity as any).hasTriggeredYujiGhostDash = true;
+
+              this.pendingYujiGhostDashes.push({
+                ownerId: yujiEntity.id,
+                targetId: targetEntity.id,
+                delayTimer: 1000, // 1 second gap!
+                initialFacingRight: yujiEntity.facingRight,
+                phase: 'WAITING',
+                dashTimer: 250,
+                ghostPos: { x: targetEntity.pos.x + (yujiEntity.facingRight ? 200 : -200), y: targetEntity.pos.y },
+                ghostVel: { x: yujiEntity.facingRight ? -35 : 35, y: 0 },
+                hasHit: false
+              });
+            }
+          }
+        } else {
+          (yujiEntity as any).hasTriggeredYujiGhostDash = false;
+        }
+      }
+    }
+
+    // Update Pending Yuji Domain Ghost Dashes
+    for (let i = this.pendingYujiGhostDashes.length - 1; i >= 0; i--) {
+      const ghost = this.pendingYujiGhostDashes[i];
+      const target = ghost.targetId === this.player.id ? this.player : this.abonant;
+      const owner = ghost.ownerId === this.player.id ? this.player : this.abonant;
+
+      if (ghost.phase === 'WAITING') {
+        ghost.delayTimer -= dt;
+        if (ghost.delayTimer <= 0) {
+          ghost.phase = 'DASHING';
+          ghost.dashTimer = 250;
+          const ghostFacingRight = !ghost.initialFacingRight;
+          ghost.ghostPos = {
+            x: target.pos.x + (ghostFacingRight ? -250 : 250),
+            y: target.pos.y
+          };
+          ghost.ghostVel = {
+            x: ghostFacingRight ? 45 : -45,
+            y: 0
+          };
+          soundManager.playDash();
+        }
+      } else if (ghost.phase === 'DASHING') {
+        ghost.dashTimer -= dt;
+        ghost.ghostPos.x += ghost.ghostVel.x * (dt / 16.66);
+
+        // Ghost trail particles
+        if (Math.random() > 0.2) {
+          this.particles.push(new Particle(
+            ghost.ghostPos.x + 20, ghost.ghostPos.y + 40,
+            (Math.random() - 0.5) * 10, (Math.random() - 0.5) * 10,
+            300, '#ff1744', 12, 'line'
+          ));
+        }
+
+        // 100% sure to hit target!
+        const ghostRect = { x: ghost.ghostPos.x, y: ghost.ghostPos.y, width: 40, height: 80 };
+        if (!ghost.hasHit && (this.checkCollision(ghostRect, target.getRect()) || ghost.dashTimer < 125)) {
+          ghost.hasHit = true;
+          
+          const damage = 25;
+          target.hp -= damage; // Direct 100% sure hit bypassing phase/invuln
+          owner.energy = Math.min(100, owner.energy + 5);
+          owner.hp = Math.min(owner.maxHp, owner.hp + damage * 0.2);
+
+          this.triggerBlackFlash(target.pos.x + target.width / 2, target.pos.y + target.height / 2);
+          this.triggerShake(12);
+          soundManager.playSlash();
+        }
+
+        if (ghost.dashTimer <= 0) {
+          this.pendingYujiGhostDashes.splice(i, 1);
+        }
+      }
+    }
 
     // Update Projectiles
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
@@ -904,7 +1033,7 @@ export class GameEngine {
           if (p.abilityType === 'E' || p.abilityType === 'DOMAIN_E' || p.variant === 'omni_cleave') {
             damage = (4 + p.damageOverride) / 3;
             if (isDomainActive && this.domainManager.type === 'Sukuna' && this.domainManager.ownerId === p.ownerId) {
-              damage *= 0.75; // Reduce E damage by 25% in domain
+              damage *= 0.9; // Reduce E damage by 10% in domain
             }
           } else if (p.abilityType === 'Q' || p.variant === 'world_slash') {
             damage = Q_DMG + p.damageOverride; // Ensure base Q damage + override
@@ -966,7 +1095,7 @@ export class GameEngine {
           if (p.abilityType === 'E' || p.abilityType === 'DOMAIN_E' || p.variant === 'omni_cleave') {
             damage = (4 + p.damageOverride) / 3;
             if (isDomainActive && this.domainManager.type === 'Sukuna' && this.domainManager.ownerId === p.ownerId) {
-              damage *= 0.75; // Reduce E damage by 25% in domain
+              damage *= 0.9; // Reduce E damage by 10% in domain
             }
           } else if (p.abilityType === 'Q' || p.variant === 'world_slash') {
             damage = Q_DMG + p.damageOverride; // Ensure base Q damage + override
@@ -1609,6 +1738,69 @@ export class GameEngine {
     // Draw Sukuna Slashes
     if (this.domainManager.active && this.domainManager.type === 'Sukuna') {
       // Omni-Directional Cleave projectiles are drawn in the projectile loop
+    }
+
+    // Draw Active Beams (e.g. Yuji Domain Laser E)
+    for (const beam of this.activeBeams) {
+      const sx = beam.start.x - this.camera.x;
+      const sy = beam.start.y - this.camera.y;
+      const ex = beam.end.x - this.camera.x;
+      const ey = beam.end.y - this.camera.y;
+      const alpha = Math.max(0, beam.timer / beam.maxTimer);
+
+      this.ctx.save();
+      this.ctx.shadowBlur = 25;
+      this.ctx.shadowColor = beam.color || '#ff1744';
+
+      this.ctx.strokeStyle = beam.color || '#ff1744';
+      this.ctx.lineWidth = 26 * alpha;
+      this.ctx.beginPath();
+      this.ctx.moveTo(sx, sy);
+      this.ctx.lineTo(ex, ey);
+      this.ctx.stroke();
+
+      this.ctx.strokeStyle = '#ffffff';
+      this.ctx.lineWidth = 8 * alpha;
+      this.ctx.beginPath();
+      this.ctx.moveTo(sx, sy);
+      this.ctx.lineTo(ex, ey);
+      this.ctx.stroke();
+
+      this.ctx.restore();
+    }
+
+    // Draw Yuji Domain Ghost Replicas
+    for (const ghost of this.pendingYujiGhostDashes) {
+      if (ghost.phase === 'DASHING') {
+        const gx = ghost.ghostPos.x - this.camera.x;
+        const gy = ghost.ghostPos.y - this.camera.y;
+
+        this.ctx.save();
+        this.ctx.shadowBlur = 25;
+        this.ctx.shadowColor = '#ff1744';
+
+        // Ghost body silhouette
+        this.ctx.fillStyle = 'rgba(255, 23, 68, 0.75)';
+        this.ctx.fillRect(gx, gy, 40, 80);
+
+        // Golden aura border
+        this.ctx.strokeStyle = '#ffd700';
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeRect(gx, gy, 40, 80);
+
+        // Glowing Eyes
+        this.ctx.fillStyle = '#ffffff';
+        const eyeX = ghost.ghostVel.x > 0 ? gx + 28 : gx + 8;
+        this.ctx.fillRect(eyeX, gy + 18, 6, 6);
+
+        // Label
+        this.ctx.font = 'bold 10px monospace';
+        this.ctx.fillStyle = '#ffd700';
+        this.ctx.textAlign = 'center';
+        this.ctx.fillText('GHOST', gx + 20, gy - 8);
+
+        this.ctx.restore();
+      }
     }
 
     // Draw Visual Slashes

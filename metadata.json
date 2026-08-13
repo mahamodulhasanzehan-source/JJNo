@@ -1,5 +1,6 @@
 {
-  "name": "JJNo",
-  "description": "A cursed combat web game",
-  "requestFramePermissions": []
+  "name": "Cursed Combat",
+  "description": "A high-octane 2D cursed energy anime fighting game featuring Gojo, Sukuna, Yuji, Megumi, and Hakari.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

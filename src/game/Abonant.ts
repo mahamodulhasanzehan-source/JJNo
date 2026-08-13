@@ -8,6 +8,7 @@ import { InputManager } from './InputManager';
 import { soundManager } from './SoundManager';
 import { fireSukunaE } from '../entities/sukuna/sukuna_E';
 import { fireSukunaQDomain } from '../entities/sukuna/sukuna_Q';
+import { fireYujiDomainE } from '../entities/yuji/yuji_E';
 
 type AIState = 'IDLE' | 'APPROACH' | 'RETREAT' | 'ATTACK_E' | 'ATTACK_Q' | 'BAIT' | 'DESPERATION' | 'DOMAIN';
 
@@ -32,10 +33,27 @@ export class Abonant extends Entity {
     this.input = input;
   }
 
-  update(dt: number, groundY: number, player: Player, projectiles: Projectile[], particles: Particle[], triggerShake: () => void, isSukunaDomainActive: boolean = false, isYujiDomainActive: boolean = false, isMegumiDomainActive: boolean = false, isEnemyDomainActive: boolean = false) {
+  update(
+    dt: number, 
+    groundY: number, 
+    player: Player, 
+    projectiles: Projectile[], 
+    particles: Particle[], 
+    triggerShake: (amt?: number) => void, 
+    isSukunaDomainActive: boolean = false, 
+    isYujiDomainActive: boolean = false, 
+    isMegumiDomainActive: boolean = false, 
+    isEnemyDomainActive: boolean = false,
+    activeBeams?: any[],
+    visualSlashes?: any[]
+  ) {
     const energyRegenMultiplier = (isYujiDomainActive && this.characterType === 'Yuji') ? 1.5 : 1.0;
     const statsResult = this.updateStats(dt, energyRegenMultiplier);
     this.target = player;
+
+    if (isYujiDomainActive || (isEnemyDomainActive && player.characterType === 'Yuji')) {
+      this.stunTimer = 0; // Prevent stun in Yuji domain
+    }
     
     if (this.input) {
       this.handleInput(dt);
@@ -47,7 +65,7 @@ export class Abonant extends Entity {
       }
     }
 
-    this.executeState(dt, projectiles, particles, triggerShake, isSukunaDomainActive, isYujiDomainActive, isMegumiDomainActive, isEnemyDomainActive);
+    this.executeState(dt, projectiles, particles, triggerShake, isSukunaDomainActive, isYujiDomainActive, isMegumiDomainActive, activeBeams, visualSlashes);
     if (this.sukunaQTimer > 0) {
       this.sukunaQTimer = 0;
     }
@@ -181,11 +199,21 @@ export class Abonant extends Entity {
 
     // Block abilities in enemy domain (but allow DOMAIN overriding if possible)
     if (isEnemyDomainActive && (this.state === 'ATTACK_E' || this.state === 'ATTACK_Q' || this.state === 'DESPERATION')) {
-      this.state = 'APPROACH';
+      this.state = absDist < 250 ? (Math.random() > 0.3 ? 'RETREAT' : 'BAIT') : (Math.random() > 0.5 ? 'APPROACH' : 'BAIT');
     }
   }
 
-  executeState(dt: number, projectiles: Projectile[], particles: Particle[], triggerShake: () => void, isSukunaDomainActive: boolean = false, isYujiDomainActive: boolean = false, isMegumiDomainActive: boolean = false) {
+  executeState(
+    dt: number, 
+    projectiles: Projectile[], 
+    particles: Particle[], 
+    triggerShake: (amt?: number) => void, 
+    isSukunaDomainActive: boolean = false, 
+    isYujiDomainActive: boolean = false, 
+    isMegumiDomainActive: boolean = false,
+    activeBeams?: any[],
+    visualSlashes?: any[]
+  ) {
     let speed = 4;
     if (this.characterType === 'Gojo') speed *= 1.1; // Gojo is 10% faster
     if (this.staminaPenaltyTimer > 0) speed *= 0.7;
@@ -195,7 +223,8 @@ export class Abonant extends Entity {
 
     if (isYujiDomainActive) {
       if (this.state === 'ATTACK_Q' || this.state === 'DOMAIN') {
-        this.state = 'APPROACH'; // Restricted
+        const absDist = this.target ? Math.abs(this.target.pos.x - this.pos.x) : 300;
+        this.state = absDist < 250 ? 'RETREAT' : 'APPROACH';
       }
     }
 
@@ -217,12 +246,15 @@ export class Abonant extends Entity {
         break;
       case 'RETREAT':
         this.vel.x = this.facingRight ? -speed : speed;
+        if (Math.random() > 0.90 && this.isGrounded) {
+          this.vel.y = -12; // Active hop away
+        }
         break;
       case 'BAIT':
         // Move erratically just outside range
-        this.vel.x = (Math.random() > 0.5 ? speed * 1.2 : -speed * 1.2);
-        if (Math.random() > 0.95 && this.isGrounded) {
-           this.vel.y = -10; // Occasional short hop
+        this.vel.x = (Math.random() > 0.5 ? speed * 1.3 : -speed * 1.3);
+        if (Math.random() > 0.88 && this.isGrounded) {
+           this.vel.y = -12; // Active short hop
         }
         break;
       case 'DESPERATION':
@@ -261,31 +293,50 @@ export class Abonant extends Entity {
           }
         } else {
           if (this.energy >= E_COST && this.cooldowns.e <= 0) {
-            this.energy -= E_COST;
-            let baseECooldown = 800;
-            this.cooldowns.e = baseECooldown;
-            
-            let vx = (this.facingRight ? 15 : -15);
-            let vy = 0;
-            
-            let projColor = '#00ffff';
-            let variant = 'normal';
-            if (activeCharacterTypeE === 'Gojo') projColor = '#8a2be2';
-            if (activeCharacterTypeE === 'Megumi') projColor = '#00008b';
-            if (activeCharacterTypeE === 'Hakari') {
-              const isPull = Math.random() > 0.5;
-              projColor = isPull ? '#00ffff' : '#ffff00';
-              variant = isPull ? 'pull' : 'knockback';
-            }
-            
-            projectiles.push(new Projectile(this.pos.x + (this.facingRight ? this.width : -20), this.pos.y + 20, vx, vy, this.id, projColor, 'E', activeCharacterTypeE, 0, 0, variant));
-            
-            for(let i=0; i<15; i++) {
-              particles.push(new Particle(
-                this.pos.x + this.width/2, this.pos.y + this.height/2,
-                (Math.random() - 0.5) * 15 + vx, (Math.random() - 0.5) * 15 + vy,
-                400, projColor, 6
-              ));
+            if (isYujiDomainActive && activeCharacterTypeE === 'Yuji') {
+              if (this.yujiDomainEWindowTimer > 0 && this.yujiDomainECastCount >= 5) {
+                // Blocked
+              } else {
+                this.energy -= E_COST;
+                let baseECooldown = 800;
+                this.cooldowns.e = baseECooldown;
+                
+                if (this.yujiDomainEWindowTimer <= 0) {
+                  this.yujiDomainEWindowTimer = 5000;
+                  this.yujiDomainECastCount = 1;
+                } else {
+                  this.yujiDomainECastCount++;
+                }
+                
+                fireYujiDomainE(this, this.target, particles, activeBeams || [], visualSlashes || [], triggerShake, () => soundManager.playBeam());
+              }
+            } else {
+              this.energy -= E_COST;
+              let baseECooldown = 800;
+              this.cooldowns.e = baseECooldown;
+              
+              let vx = (this.facingRight ? 15 : -15);
+              let vy = 0;
+              
+              let projColor = '#00ffff';
+              let variant = 'normal';
+              if (activeCharacterTypeE === 'Gojo') projColor = '#8a2be2';
+              if (activeCharacterTypeE === 'Megumi') projColor = '#00008b';
+              if (activeCharacterTypeE === 'Hakari') {
+                const isPull = Math.random() > 0.5;
+                projColor = isPull ? '#00ffff' : '#ffff00';
+                variant = isPull ? 'pull' : 'knockback';
+              }
+              
+              projectiles.push(new Projectile(this.pos.x + (this.facingRight ? this.width : -20), this.pos.y + 20, vx, vy, this.id, projColor, 'E', activeCharacterTypeE, 0, 0, variant));
+              
+              for(let i=0; i<15; i++) {
+                particles.push(new Particle(
+                  this.pos.x + this.width/2, this.pos.y + this.height/2,
+                  (Math.random() - 0.5) * 15 + vx, (Math.random() - 0.5) * 15 + vy,
+                  400, projColor, 6
+                ));
+              }
             }
           }
           this.state = 'IDLE';
@@ -309,6 +360,9 @@ export class Abonant extends Entity {
             let dashSpeed = 20;
             if (activeCharacterTypeQ === 'Gojo' || activeCharacterTypeQ === 'Megumi' || activeCharacterTypeQ === 'Hakari' || activeCharacterTypeQ === 'Sukuna') {
               dashSpeed *= 1.25;
+            }
+            if (isYujiDomainActive && activeCharacterTypeQ === 'Yuji') {
+              dashSpeed *= 2.0; // Dash twice as far in Yuji's domain
             }
             
             if (activeCharacterTypeQ === 'Megumi') {
