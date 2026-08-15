@@ -47,7 +47,7 @@ export default function CharacterSilhouette({ type, selected, glowColor }: Silho
 
 function YujiSilhouette({ selected }: { selected: boolean }) {
   return (
-    <svg viewBox="0 0 200 240" className="w-44 h-56 drop-shadow-[0_0_20px_rgba(255,100,0,0.8)]">
+    <svg viewBox="0 0 200 240" className="w-44 h-56 drop-shadow-[0_0_15px_rgba(255,100,0,0.6)]">
       <defs>
         <linearGradient id="yujiUniform" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#1e293b" />
@@ -68,31 +68,36 @@ function YujiSilhouette({ selected }: { selected: boolean }) {
       <path d="M 76 122 Q 100 142 124 122 L 118 133 Q 100 148 82 133 Z" fill="#991b1b" />
 
       {/* Solid Athletic Neck */}
-      <path d="M 85 98 L 115 98 L 117 125 L 83 125 Z" fill="#e5b899" />
+      <path d="M 85 95 L 115 95 L 117 122 L 83 122 Z" fill="#fed7aa" />
 
       {/* Human Head & Chin */}
-      <path d="M 70 70 C 70 108, 130 108, 130 70 C 130 40, 70 40, 70 70 Z" fill="#f5cbba" />
+      <path d="M 72 68 C 72 104, 128 104, 128 68 C 128 40, 72 40, 72 68 Z" fill="#ffe4d6" />
+      
       {/* Facial Features (Eyes & Scars) */}
-      <ellipse cx="86" cy="72" rx="4" ry="2" fill="#1e293b" />
-      <ellipse cx="114" cy="72" rx="4" ry="2" fill="#1e293b" />
-      {/* Under-eye scar lines */}
-      <line x1="82" y1="78" x2="90" y2="78" stroke="#991b1b" strokeWidth="1.5" />
-      <line x1="110" y1="78" x2="118" y2="78" stroke="#991b1b" strokeWidth="1.5" />
+      <ellipse cx="86" cy="72" rx="4" ry="2.5" fill="#0f172a" />
+      <ellipse cx="114" cy="72" rx="4" ry="2.5" fill="#0f172a" />
+      <circle cx="87" cy="71" r="1" fill="#ffffff" />
+      <circle cx="115" cy="71" r="1" fill="#ffffff" />
+      
+      {/* Under-eye Sukuna slit scar lines */}
+      <line x1="82" y1="78" x2="90" y2="78" stroke="#7f1d1d" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="110" y1="78" x2="118" y2="78" stroke="#7f1d1d" strokeWidth="1.5" strokeLinecap="round" />
+
+      {/* Dark Undercut Hair Base */}
+      <path d="M 70 65 Q 100 52 130 65 L 132 55 Q 100 42 68 55 Z" fill="#1e293b" />
 
       {/* Spiky Salmon-Pink Hair */}
       <path 
         d="M 66 65 L 52 40 L 72 48 L 82 22 L 95 38 L 105 18 L 118 38 L 132 25 L 135 50 L 148 42 L 134 68 Q 100 35 66 65 Z" 
-        fill={selected ? "#ff7700" : "#f87171"} 
+        fill={selected ? "#fb7185" : "#f43f5e"} 
       />
-      {/* Dark Hair Under-shading */}
-      <path d="M 68 62 Q 100 45 132 62 Q 120 70 100 68 Q 80 70 68 62 Z" fill="#78350f" opacity="0.6" />
     </svg>
   );
 }
 
 function GojoSilhouette({ selected }: { selected: boolean }) {
   return (
-    <svg viewBox="0 0 200 240" className="w-44 h-56 drop-shadow-[0_0_20px_rgba(168,85,247,0.8)]">
+    <svg viewBox="0 0 200 240" className="w-44 h-56 drop-shadow-[0_0_15px_rgba(168,85,247,0.6)]">
       <defs>
         <linearGradient id="gojoCoat" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#1e1b4b" />
@@ -111,10 +116,10 @@ function GojoSilhouette({ selected }: { selected: boolean }) {
       <circle cx="100" cy="118" r="4" fill="#cbd5e1" stroke="#64748b" strokeWidth="1" />
 
       {/* Neck */}
-      <path d="M 88 80 L 112 80 L 112 95 L 88 95 Z" fill="#f5cbba" />
+      <path d="M 88 80 L 112 80 L 112 95 L 88 95 Z" fill="#ffe4d6" />
 
       {/* Head & Jaw */}
-      <path d="M 70 65 C 70 100, 130 100, 130 65 C 130 35, 70 35, 70 65 Z" fill="#f5cbba" />
+      <path d="M 72 65 C 72 100, 128 100, 128 65 C 128 35, 72 35, 72 65 Z" fill="#fff1ea" />
 
       {/* Iconic Black Blindfold */}
       <rect x="68" y="56" width="64" height="20" rx="3" fill="#09090b" />
@@ -131,7 +136,7 @@ function GojoSilhouette({ selected }: { selected: boolean }) {
 
 function SukunaSilhouette({ selected }: { selected: boolean }) {
   return (
-    <svg viewBox="0 0 200 240" className="w-44 h-56 drop-shadow-[0_0_20px_rgba(239,68,68,0.9)]">
+    <svg viewBox="0 0 200 240" className="w-44 h-56 drop-shadow-[0_0_15px_rgba(239,68,68,0.7)]">
       <defs>
         <linearGradient id="sukunaKimono" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#fef2f2" />
@@ -152,18 +157,18 @@ function SukunaSilhouette({ selected }: { selected: boolean }) {
       <path d="M 20 230 L 32 122 L 76 104 L 124 104 L 168 122 L 180 230 Z" fill="url(#sukunaKimono)" />
       
       {/* Deep Muscular V-neck open chest revealing tattoos */}
-      <path d="M 72 108 L 100 176 L 128 108 Z" fill="#f5cbba" />
+      <path d="M 72 108 L 100 176 L 128 108 Z" fill="#ffe4d6" />
       {/* Pectoral Muscle Definition & Tattoo markings */}
       <circle cx="100" cy="142" r="9" fill="none" stroke="#000000" strokeWidth="2" />
       <line x1="82" y1="135" x2="118" y2="135" stroke="#000000" strokeWidth="2" />
       <line x1="86" y1="148" x2="114" y2="148" stroke="#000000" strokeWidth="1.5" opacity="0.6" />
 
       {/* Thick Muscular Neck & Tattoos */}
-      <path d="M 80 92 L 120 92 L 122 118 L 78 118 Z" fill="#f5cbba" />
+      <path d="M 80 92 L 120 92 L 122 118 L 78 118 Z" fill="#ffe4d6" />
       <line x1="84" y1="102" x2="116" y2="102" stroke="#000" strokeWidth="2.5" />
 
       {/* Head */}
-      <path d="M 70 65 C 70 100, 130 100, 130 65 C 130 35, 70 35, 70 65 Z" fill="#f5cbba" />
+      <path d="M 72 65 C 72 100, 128 100, 128 65 C 128 35, 72 35, 72 65 Z" fill="#ffe4d6" />
 
       {/* 4 Glowing Red Eyes */}
       <circle cx="84" cy="62" r="3.5" fill="#ef4444" />
@@ -177,7 +182,7 @@ function SukunaSilhouette({ selected }: { selected: boolean }) {
       {/* Swept-Back Spiky Pink Hair */}
       <path 
         d="M 66 60 L 50 35 L 72 44 L 84 15 L 98 32 L 108 15 L 120 38 L 136 22 L 134 52 L 148 40 L 134 64 Q 100 30 66 60 Z" 
-        fill="#f87171" 
+        fill="#fb7185" 
       />
     </svg>
   );
@@ -185,7 +190,7 @@ function SukunaSilhouette({ selected }: { selected: boolean }) {
 
 function MegumiSilhouette({ selected }: { selected: boolean }) {
   return (
-    <svg viewBox="0 0 200 240" className="w-44 h-56 drop-shadow-[0_0_20px_rgba(59,130,246,0.8)]">
+    <svg viewBox="0 0 200 240" className="w-44 h-56 drop-shadow-[0_0_15px_rgba(59,130,246,0.6)]">
       <defs>
         <linearGradient id="megumiUniform" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#0f172a" />
@@ -207,10 +212,10 @@ function MegumiSilhouette({ selected }: { selected: boolean }) {
       <circle cx="100" cy="125" r="3" fill="#facc15" />
 
       {/* Neck */}
-      <path d="M 88 80 L 112 80 L 112 98 L 88 98 Z" fill="#f5cbba" />
+      <path d="M 88 80 L 112 80 L 112 98 L 88 98 Z" fill="#ffe4d6" />
 
       {/* Head & Face */}
-      <path d="M 70 65 C 70 100, 130 100, 130 65 C 130 35, 70 35, 70 65 Z" fill="#f5cbba" />
+      <path d="M 72 65 C 72 100, 128 100, 128 65 C 128 35, 72 35, 72 65 Z" fill="#fff1ea" />
       <ellipse cx="86" cy="68" rx="4" ry="2" fill="#0f172a" />
       <ellipse cx="114" cy="68" rx="4" ry="2" fill="#0f172a" />
 
@@ -227,7 +232,7 @@ function MegumiSilhouette({ selected }: { selected: boolean }) {
 
 function HakariSilhouette({ selected }: { selected: boolean }) {
   return (
-    <svg viewBox="0 0 200 240" className="w-44 h-56 drop-shadow-[0_0_20px_rgba(236,72,153,0.8)]">
+    <svg viewBox="0 0 200 240" className="w-44 h-56 drop-shadow-[0_0_15px_rgba(236,72,153,0.6)]">
       <defs>
         <linearGradient id="hakariJacket" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#831843" />
@@ -251,11 +256,11 @@ function HakariSilhouette({ selected }: { selected: boolean }) {
       <path d="M 76 114 L 100 178 L 124 114 Z" fill="#ffffff" />
 
       {/* Thick Neck & Gold Chain */}
-      <path d="M 84 94 L 116 94 L 116 122 L 84 122 Z" fill="#f5cbba" />
+      <path d="M 84 94 L 116 94 L 116 122 L 84 122 Z" fill="#fed7aa" />
       <path d="M 84 110 Q 100 126 116 110" stroke="#facc15" strokeWidth="2.5" fill="none" />
 
       {/* Head */}
-      <path d="M 70 65 C 70 100, 130 100, 130 65 C 130 35, 70 35, 70 65 Z" fill="#f5cbba" />
+      <path d="M 72 65 C 72 100, 128 100, 128 65 C 128 35, 72 35, 72 65 Z" fill="#ffe4d6" />
 
       {/* Stylish Dark Sunglasses */}
       <rect x="74" y="58" width="52" height="14" rx="3" fill="#18181b" />

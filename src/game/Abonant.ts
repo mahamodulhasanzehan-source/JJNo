@@ -198,7 +198,7 @@ export class Abonant extends Entity {
     }
 
     // Block abilities in enemy domain (but allow DOMAIN overriding if possible)
-    if (isEnemyDomainActive && (this.state === 'ATTACK_E' || this.state === 'ATTACK_Q' || this.state === 'DESPERATION')) {
+    if (isEnemyDomainActive && (this.state === 'ATTACK_E' || this.state === 'ATTACK_Q')) {
       this.state = absDist < 250 ? (Math.random() > 0.3 ? 'RETREAT' : 'BAIT') : (Math.random() > 0.5 ? 'APPROACH' : 'BAIT');
     }
   }

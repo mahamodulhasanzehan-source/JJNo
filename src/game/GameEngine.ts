@@ -186,7 +186,7 @@ export class GameEngine {
     return false;
   }
 
-  applyAbilityEffects(target: Entity, sourceCharacter: CharacterType, abilityType: 'E' | 'Q', sourceEntity: Entity) {
+  applyAbilityEffects(target: Entity, sourceCharacter: CharacterType, abilityType: 'E' | 'Q' | string, sourceEntity: Entity) {
     const isYujiDomainActive = this.domainManager.active && this.domainManager.type === 'Yuji';
     if (sourceCharacter === 'Yuji') {
       if (abilityType === 'E') {

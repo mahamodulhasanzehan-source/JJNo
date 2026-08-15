@@ -43,8 +43,12 @@ export function HUD({ gameState }: HUDProps) {
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,0,0,0.08)_1px,transparent_1px)] bg-[size:10%_100%]" />
           {/* Fill bar */}
           <div 
-            className="h-full bg-gradient-to-r from-red-600 via-rose-500 to-amber-400 relative transition-all duration-150 ease-out shadow-[0_0_25px_rgba(239,68,68,1)] rounded-xs"
-            style={{ width: `${playerHpPct}%` }}
+            className="h-full bg-red-600 relative transition-all duration-150 ease-out shadow-[0_0_25px_rgba(239,68,68,1)] rounded-xs"
+            style={{ 
+              width: `${playerHpPct}%`,
+              backgroundColor: '#dc2626',
+              backgroundImage: 'linear-gradient(90deg, #dc2626 0%, #f43f5e 50%, #f59e0b 100%)'
+            }}
           >
             <div className="absolute top-0 left-0 w-full h-2/5 bg-white/40" />
             <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_80%,rgba(255,255,255,0.6)_100%)]" />
@@ -60,8 +64,12 @@ export function HUD({ gameState }: HUDProps) {
             </div>
             <div className="w-full h-3 md:h-4 bg-zinc-950/90 border border-cyan-500/50 p-0.5 relative overflow-hidden backdrop-blur-md rounded-xs">
               <div 
-                className="h-full bg-gradient-to-r from-blue-600 via-cyan-400 to-sky-300 transition-all duration-75 relative shadow-[0_0_15px_rgba(6,182,212,0.9)]"
-                style={{ width: `${playerEnergyPct}%` }}
+                className="h-full bg-cyan-500 transition-all duration-75 relative shadow-[0_0_15px_rgba(6,182,212,0.9)]"
+                style={{ 
+                  width: `${playerEnergyPct}%`,
+                  backgroundColor: '#06b6d4',
+                  backgroundImage: 'linear-gradient(90deg, #2563eb 0%, #06b6d4 60%, #38bdf8 100%)'
+                }}
               >
                 <div className="absolute top-0 left-0 w-full h-1/2 bg-white/40" />
               </div>
@@ -79,11 +87,15 @@ export function HUD({ gameState }: HUDProps) {
             <div className="w-full h-3 md:h-4 bg-zinc-950/90 border border-emerald-500/50 p-0.5 relative overflow-hidden backdrop-blur-md rounded-xs">
               <div 
                 className={`h-full transition-all duration-100 relative shadow-[0_0_15px_rgba(34,197,94,0.9)] ${
-                  playerStaminaPct <= 5 
-                    ? "bg-gradient-to-r from-amber-600 to-red-500 animate-pulse" 
-                    : "bg-gradient-to-r from-emerald-600 via-green-400 to-lime-300"
+                  playerStaminaPct <= 5 ? "bg-amber-600 animate-pulse" : "bg-emerald-500"
                 }`}
-                style={{ width: `${playerStaminaPct}%` }}
+                style={{ 
+                  width: `${playerStaminaPct}%`,
+                  backgroundColor: playerStaminaPct <= 5 ? '#d97706' : '#10b981',
+                  backgroundImage: playerStaminaPct <= 5 
+                    ? 'linear-gradient(90deg, #d97706 0%, #ef4444 100%)' 
+                    : 'linear-gradient(90deg, #059669 0%, #22c55e 60%, #a3e635 100%)'
+                }}
               >
                 <div className="absolute top-0 left-0 w-full h-1/2 bg-white/40" />
               </div>
@@ -138,8 +150,12 @@ export function HUD({ gameState }: HUDProps) {
           <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,0,0,0.08)_1px,transparent_1px)] bg-[size:10%_100%]" />
           <div className="w-full h-full flex justify-end">
             <div 
-              className="h-full bg-gradient-to-l from-red-600 via-orange-500 to-amber-400 relative transition-all duration-150 ease-out shadow-[0_0_25px_rgba(239,68,68,1)] rounded-xs"
-              style={{ width: `${enemyHpPct}%` }}
+              className="h-full bg-red-600 relative transition-all duration-150 ease-out shadow-[0_0_25px_rgba(239,68,68,1)] rounded-xs"
+              style={{ 
+                width: `${enemyHpPct}%`,
+                backgroundColor: '#dc2626',
+                backgroundImage: 'linear-gradient(270deg, #dc2626 0%, #ea580c 50%, #f59e0b 100%)'
+              }}
             >
               <div className="absolute top-0 left-0 w-full h-2/5 bg-white/40" />
               <div className="absolute inset-0 bg-[linear-gradient(-90deg,transparent_80%,rgba(255,255,255,0.6)_100%)]" />
@@ -157,8 +173,12 @@ export function HUD({ gameState }: HUDProps) {
             <div className="w-full h-3 md:h-4 bg-zinc-950/90 border border-blue-500/50 p-0.5 relative overflow-hidden backdrop-blur-md rounded-xs">
               <div className="w-full h-full flex justify-end">
                 <div 
-                  className="h-full bg-gradient-to-l from-blue-600 via-indigo-400 to-sky-300 transition-all duration-75 relative shadow-[0_0_15px_rgba(59,130,246,0.9)]"
-                  style={{ width: `${enemyEnergyPct}%` }}
+                  className="h-full bg-blue-600 transition-all duration-75 relative shadow-[0_0_15px_rgba(59,130,246,0.9)]"
+                  style={{ 
+                    width: `${enemyEnergyPct}%`,
+                    backgroundColor: '#2563eb',
+                    backgroundImage: 'linear-gradient(270deg, #2563eb 0%, #6366f1 60%, #38bdf8 100%)'
+                  }}
                 >
                   <div className="absolute top-0 left-0 w-full h-1/2 bg-white/40" />
                 </div>
@@ -178,11 +198,15 @@ export function HUD({ gameState }: HUDProps) {
               <div className="w-full h-full flex justify-end">
                 <div 
                   className={`h-full transition-all duration-100 relative shadow-[0_0_15px_rgba(34,197,94,0.9)] ${
-                    enemyStaminaPct <= 5 
-                      ? "bg-gradient-to-l from-amber-600 to-red-500 animate-pulse" 
-                      : "bg-gradient-to-l from-emerald-600 via-green-400 to-lime-300"
+                    enemyStaminaPct <= 5 ? "bg-amber-600 animate-pulse" : "bg-emerald-500"
                   }`}
-                  style={{ width: `${enemyStaminaPct}%` }}
+                  style={{ 
+                    width: `${enemyStaminaPct}%`,
+                    backgroundColor: enemyStaminaPct <= 5 ? '#d97706' : '#10b981',
+                    backgroundImage: enemyStaminaPct <= 5 
+                      ? 'linear-gradient(270deg, #d97706 0%, #ef4444 100%)' 
+                      : 'linear-gradient(270deg, #059669 0%, #22c55e 60%, #a3e635 100%)'
+                  }}
                 >
                   <div className="absolute top-0 left-0 w-full h-1/2 bg-white/40" />
                 </div>
