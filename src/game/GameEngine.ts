@@ -530,6 +530,7 @@ export class GameEngine {
           soundManager.playBoxingBell();
         }
       }
+      this.abonant.state = 'IDLE';
     }
 
     const wasDomainActive = this.domainManager.active;

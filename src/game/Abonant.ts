@@ -2,15 +2,25 @@ import { Entity } from './Entity';
 import { Player } from './Player';
 import { Projectile } from './Projectile';
 import { Particle } from './Particle';
-import { E_COST, Q_COST } from './Constants';
-import { CharacterType, Vector2 } from './Types';
+import { E_COST, Q_COST, C_COST } from './Constants';
+import { CharacterType } from './Types';
 import { InputManager } from './InputManager';
 import { soundManager } from './SoundManager';
 import { fireSukunaE } from '../entities/sukuna/sukuna_E';
 import { fireSukunaQDomain } from '../entities/sukuna/sukuna_Q';
 import { fireYujiDomainE } from '../entities/yuji/yuji_E';
 
-type AIState = 'IDLE' | 'APPROACH' | 'RETREAT' | 'ATTACK_E' | 'ATTACK_Q' | 'BAIT' | 'DESPERATION' | 'DOMAIN';
+export type AIState = 
+  | 'IDLE' 
+  | 'APPROACH' 
+  | 'SPACING' 
+  | 'CROSS_UP' 
+  | 'PUNISH' 
+  | 'ATTACK_E' 
+  | 'ATTACK_Q' 
+  | 'DOMAIN' 
+  | 'COMBO_RUSH' 
+  | 'TACTICAL_BACKSTEP';
 
 export class Abonant extends Entity {
   state: AIState = 'IDLE';
@@ -18,6 +28,13 @@ export class Abonant extends Entity {
   target: Player | null = null;
   reactionTimer: number = 0;
   input?: InputManager;
+
+  // Tactical AI Attributes
+  spacingTargetDist: number = 220;
+  isConservingEnergy: boolean = true;
+  lastPlayerPos: { x: number; y: number } = { x: 0, y: 0 };
+  punishTimer: number = 0;
+  crossUpDirection: number = 1;
 
   constructor(id: string, x: number, y: number, input?: InputManager) {
     const types: CharacterType[] = ['Gojo', 'Sukuna', 'Yuji', 'Megumi', 'Hakari'];
@@ -31,6 +48,29 @@ export class Abonant extends Entity {
     };
     super(id, x, y, randomType, colors[randomType]);
     this.input = input;
+
+    // Archetype-specific preferred spacing
+    if (randomType === 'Yuji') this.spacingTargetDist = 140;
+    else if (randomType === 'Sukuna') this.spacingTargetDist = 240;
+    else if (randomType === 'Gojo') this.spacingTargetDist = 220;
+    else if (randomType === 'Megumi') this.spacingTargetDist = 260;
+    else if (randomType === 'Hakari') this.spacingTargetDist = 160;
+  }
+
+  getDomainCost(): number {
+    const activeType = this.mimicryTarget || this.characterType;
+    if (activeType === 'Gojo') return 75;
+    if (activeType === 'Megumi') return 90;
+    return C_COST; // 70
+  }
+
+  canCastDomain(isSukunaDomainActive: boolean, isYujiDomainActive: boolean): boolean {
+    const activeType = this.mimicryTarget || this.characterType;
+    if (activeType === 'Hakari' && this.infiniteCeTimer > 0) return false;
+    if (activeType === 'Megumi' && this.hasSpawnedMahoraga) return false;
+    if (isSukunaDomainActive || isYujiDomainActive) return false;
+    if (this.cooldowns.c > 0) return false;
+    return true;
   }
 
   update(
@@ -52,16 +92,21 @@ export class Abonant extends Entity {
     this.target = player;
 
     if (isYujiDomainActive || (isEnemyDomainActive && player.characterType === 'Yuji')) {
-      this.stunTimer = 0; // Prevent stun in Yuji domain
+      this.stunTimer = 0;
     }
     
+    if (this.stateTimer > 0) {
+      this.stateTimer -= dt;
+    }
+
     if (this.input) {
       this.handleInput(dt);
     } else {
       this.reactionTimer -= dt;
       if (this.reactionTimer <= 0) {
-        this.think(projectiles, isSukunaDomainActive, isYujiDomainActive, isEnemyDomainActive);
-        this.reactionTimer = 150 + Math.random() * 100; // 150-250ms reaction time
+        this.think(projectiles, isSukunaDomainActive, isYujiDomainActive, isEnemyDomainActive, isMegumiDomainActive);
+        // Responsive 100-160ms reaction time for sharp decision making
+        this.reactionTimer = 100 + Math.random() * 60;
       }
     }
 
@@ -80,10 +125,10 @@ export class Abonant extends Entity {
     this.state = 'IDLE';
     
     if (this.input.isKeyDown('a')) {
-      this.state = this.facingRight ? 'RETREAT' : 'APPROACH';
+      this.state = this.facingRight ? 'TACTICAL_BACKSTEP' : 'APPROACH';
       this.facingRight = false;
     } else if (this.input.isKeyDown('d')) {
-      this.state = this.facingRight ? 'APPROACH' : 'RETREAT';
+      this.state = this.facingRight ? 'APPROACH' : 'TACTICAL_BACKSTEP';
       this.facingRight = true;
     }
 
@@ -95,7 +140,6 @@ export class Abonant extends Entity {
     }
 
     if (this.input.isKeyDown('shift')) {
-      // Dash handled in executeState or we can just set a flag
       this.isDashing = true;
     } else {
       this.isDashing = false;
@@ -110,91 +154,261 @@ export class Abonant extends Entity {
     }
   }
 
-  think(projectiles: Projectile[], isSukunaDomainActive: boolean = false, isYujiDomainActive: boolean = false, isEnemyDomainActive: boolean = false) {
-    if (!this.target) return;
+  think(
+    projectiles: Projectile[], 
+    isSukunaDomainActive: boolean = false, 
+    isYujiDomainActive: boolean = false, 
+    isEnemyDomainActive: boolean = false,
+    isMegumiDomainActive: boolean = false
+  ) {
+    if (!this.target || this.stunTimer > 0) return;
+    
     const dist = this.target.pos.x - this.pos.x;
     const absDist = Math.abs(dist);
-
+    const targetYDiff = this.target.pos.y - this.pos.y;
     this.facingRight = dist > 0;
 
-    // Jump or dash over incoming projectiles
+    const domainCost = this.getDomainCost();
+    const canDomain = this.canCastDomain(isSukunaDomainActive, isYujiDomainActive);
+    const activeType = this.mimicryTarget || this.characterType;
+    const isJackpotFrenzy = activeType === 'Hakari' && this.infiniteCeTimer > 0;
+    const isOwnDomainActive = isSukunaDomainActive || isYujiDomainActive || (isMegumiDomainActive && this.hasSpawnedMahoraga);
+
+    // -------------------------------------------------------------
+    // 1. ULTIMATE / DOMAIN EXPANSION PRIORITY
+    // -------------------------------------------------------------
+    if (canDomain && this.energy >= domainCost) {
+      // Energy is fully stored! Cast Domain immediately
+      this.state = 'DOMAIN';
+      if (this.isGrounded && Math.random() > 0.6) {
+        // Quick leap or stand ground for dramatic domain expansion
+        this.vel.x = 0;
+      }
+      return;
+    }
+
+    // Determine if we should be conserving Cursed Energy for our Domain
+    // If domain is available and we haven't cast it yet, actively save energy!
+    this.isConservingEnergy = canDomain && this.energy < domainCost;
+
+    // -------------------------------------------------------------
+    // 2. DEFENSIVE EVASION & PROJECTILE INTERCEPTION
+    // -------------------------------------------------------------
     for (const p of projectiles) {
       if (p.ownerId !== this.id && p.active) {
         const pDist = p.pos.x - this.pos.x;
-        // If projectile is approaching and close
-        if (Math.abs(pDist) < 200 && Math.sign(pDist) !== Math.sign(p.vel.x)) {
-          if (this.isGrounded && Math.random() > 0.3) {
-            this.vel.y = -12;
+        const isApproaching = (pDist > 0 && p.vel.x < 0) || (pDist < 0 && p.vel.x > 0);
+        
+        if (Math.abs(pDist) < 220 && isApproaching) {
+          // If grounded, jump over incoming projectile
+          if (this.isGrounded && Math.random() > 0.25) {
+            this.vel.y = -14;
+            this.vel.x = (this.facingRight ? 1 : -1) * 6;
             this.isGrounded = false;
-          } else if (this.energy >= Q_COST && this.cooldowns.q <= 0 && Math.random() > 0.5) {
-            // Dodge by dashing through it
+            return;
+          } 
+          // If projectile is large/dangerous and we have spare energy or are in danger, dash through with invincibility
+          else if (this.energy >= Q_COST && this.cooldowns.q <= 0 && (!this.isConservingEnergy || this.energy >= Q_COST + 15 || this.hp < 60)) {
             this.state = 'ATTACK_Q';
             return;
           }
-          break;
         }
       }
     }
 
-    if (this.target.phaseTimer > 0) {
-      this.state = 'RETREAT';
+    // -------------------------------------------------------------
+    // 3. STAGE POSITIONING & ANTI-CORNER (NO TRAPPING OURSELVES)
+    // -------------------------------------------------------------
+    // If near the left or right wall, cross up towards center stage
+    if (this.pos.x < 120 && !this.facingRight) {
+      this.crossUpOverTarget();
+      return;
+    } else if (this.pos.x > 1800 && this.facingRight) {
+      this.crossUpOverTarget();
       return;
     }
 
-    // Domain Usage: Be much more proactive if we have the energy (Blocked for Hakari during Infinite CE, Megumi once per match with 90 CE)
-    const domainCost = this.characterType === 'Gojo' ? 75 : (this.characterType === 'Megumi' ? 90 : 70);
-    const canUseDomain = !(this.characterType === 'Hakari' && this.infiniteCeTimer > 0) &&
-                         !(this.characterType === 'Megumi' && this.hasSpawnedMahoraga);
-    if (this.energy >= domainCost && this.cooldowns.c <= 0 && !isSukunaDomainActive && !isYujiDomainActive && canUseDomain) {
-       if (Math.random() > 0.05) { // 95% chance to use domain when available
-           this.state = 'DOMAIN';
-           return;
-       }
+    // -------------------------------------------------------------
+    // 4. PLAYER INVULNERABILITY / PHASE TIMING (SMART PUNISH SETUP)
+    // -------------------------------------------------------------
+    if (this.target.phaseTimer > 0) {
+      // Don't run across the map; space right at strike boundary (~180px) and prepare punish
+      if (absDist < 120) {
+        this.state = 'SPACING';
+      } else {
+        this.state = 'IDLE';
+      }
+      return;
     }
 
-    if (this.target.energy >= 50 && Math.random() > 0.7) {
-       this.state = 'DESPERATION';
-       return;
+    // -------------------------------------------------------------
+    // 5. HAKARI JACKPOT BERSERKER (UNSTOPPABLE FRENZY)
+    // -------------------------------------------------------------
+    if (isJackpotFrenzy) {
+      // Infinite CE & reduced cooldowns -> Continuous relentless assault
+      if (absDist < 180 && this.cooldowns.q <= 0) {
+        this.state = 'ATTACK_Q';
+      } else if (this.cooldowns.e <= 0 && Math.random() > 0.3) {
+        this.state = 'ATTACK_E';
+      } else {
+        this.state = 'COMBO_RUSH';
+      }
+      return;
     }
 
-    // Movement and Attack Logic
-    if (absDist > 500) {
-      this.state = 'APPROACH';
-    } else if (absDist > 250 && absDist <= 500) {
-      // Mid-range
-      if (this.characterType === 'Megumi' && (this.target as any).shadowAnchor && this.energy >= Q_COST && this.cooldowns.q <= 0) {
-        this.state = 'ATTACK_Q';
-      } else if (this.characterType === 'Megumi' && !(this.target as any).shadowAnchor && this.energy >= E_COST && this.cooldowns.e <= 0) {
-        this.state = 'ATTACK_E'; // Prioritize E to set up anchor
-      } else if (this.energy >= E_COST && this.cooldowns.e <= 0 && Math.random() > 0.4) {
-        this.state = 'ATTACK_E';
-      } else if (Math.random() > 0.6) {
-        this.state = 'BAIT';
-      } else {
-        this.state = 'APPROACH';
-      }
-    } else if (absDist > 100 && absDist <= 250) {
-      // Close-mid range
-      if (this.characterType === 'Megumi' && (this.target as any).shadowAnchor && this.energy >= Q_COST && this.cooldowns.q <= 0) {
-        this.state = 'ATTACK_Q';
-      } else if (this.characterType === 'Megumi' && !(this.target as any).shadowAnchor && this.energy >= E_COST && this.cooldowns.e <= 0 && Math.random() > 0.3) {
-        this.state = 'ATTACK_E'; // Try to set up anchor even in close-mid
-      } else if (this.energy >= Q_COST && this.cooldowns.q <= 0 && Math.random() > 0.2) {
-        this.state = 'ATTACK_Q';
-      } else if (this.energy >= E_COST && this.cooldowns.e <= 0 && Math.random() > 0.5) {
-        this.state = 'ATTACK_E';
-      } else if (this.hp < 50 && Math.random() > 0.3) {
-        this.state = 'RETREAT';
-      } else {
-        this.state = Math.random() > 0.5 ? 'BAIT' : 'APPROACH';
-      }
-    } else {
-      // Melee range
+    // -------------------------------------------------------------
+    // 6. ACTIVE DOMAIN TACTICS
+    // -------------------------------------------------------------
+    if (isSukunaDomainActive) {
+      // In Malevolent Shrine: spam slashes and rush down
       if (this.energy >= Q_COST && this.cooldowns.q <= 0) {
         this.state = 'ATTACK_Q';
       } else {
-        this.state = 'RETREAT';
+        this.state = 'APPROACH';
       }
+      return;
+    }
+
+    if (isYujiDomainActive && activeType === 'Yuji') {
+      // In Yuji's Domain: Rapid soul beam E and super dashes
+      if (this.energy >= E_COST && this.cooldowns.e <= 0) {
+        this.state = 'ATTACK_E';
+      } else if (this.energy >= Q_COST && this.cooldowns.q <= 0) {
+        this.state = 'ATTACK_Q';
+      } else {
+        this.state = 'APPROACH';
+      }
+      return;
+    }
+
+    // -------------------------------------------------------------
+    // 7. MEGUMI TACTICAL SHADOW ANCHOR + MAHORAGA SYNERGY
+    // -------------------------------------------------------------
+    if (activeType === 'Megumi') {
+      const targetAnchor = (this.target as any).shadowAnchor;
+      
+      // If we are conserving for Mahoraga (need 90 CE), focus on building CE safely
+      if (this.isConservingEnergy) {
+        if (this.energy >= 82) {
+          // Almost at 90! Keep patient spacing, don't waste any CE
+          this.state = absDist < 200 ? 'SPACING' : 'APPROACH';
+          return;
+        }
+        
+        // If anchor is active on player and we have plenty of CE, dash in for guaranteed strike
+        if (targetAnchor && this.energy >= Q_COST + 35 && this.cooldowns.q <= 0) {
+          this.state = 'ATTACK_Q';
+          return;
+        }
+        
+        // Use E to anchor player only if energy won't drop too low
+        if (!targetAnchor && this.energy >= E_COST + 25 && this.cooldowns.e <= 0 && absDist < 350 && Math.random() > 0.4) {
+          this.state = 'ATTACK_E';
+          return;
+        }
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 8. SUKUNA CHARGE & DISMANTLE TACTICS
+    // -------------------------------------------------------------
+    if (activeType === 'Sukuna' && !isSukunaDomainActive) {
+      if (!this.isConservingEnergy || this.energy >= domainCost - 10) {
+        if (absDist > 200 && absDist < 450 && this.energy >= E_COST && this.cooldowns.e <= 0 && Math.random() > 0.35) {
+          this.state = 'ATTACK_E';
+          return;
+        }
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 9. GENERAL CE CONSERVATION & TACTICAL ENGAGEMENT
+    // -------------------------------------------------------------
+    if (this.isConservingEnergy) {
+      // CE Storing Mode: We want to build up to 70/75/90 CE without burning it on random neutral shots
+      const ceDeficit = domainCost - this.energy;
+
+      // Close distance (< 130px): Punish or cross up, do NOT just spam retreat
+      if (absDist < 130) {
+        if (ceDeficit <= 12) {
+          // Very close to Domain! Cross up or space out to secure the final CE ticks
+          if (Math.random() > 0.4) {
+            this.crossUpOverTarget();
+          } else {
+            this.state = 'SPACING';
+          }
+          return;
+        }
+
+        // We have plenty of leeway or player is open
+        if (this.energy >= Q_COST + 20 && this.cooldowns.q <= 0 && Math.random() > 0.3) {
+          this.state = 'ATTACK_Q';
+        } else if (Math.random() > 0.5) {
+          this.crossUpOverTarget();
+        } else {
+          this.state = 'SPACING';
+        }
+        return;
+      }
+
+      // Mid distance (130px - 320px): Optimal spacing zone for CE accumulation
+      if (absDist <= 320) {
+        // Punish player whiff or stationary target with E only if we have high CE buffer
+        if (this.energy >= E_COST + 25 && this.cooldowns.e <= 0 && Math.random() > 0.6) {
+          this.state = 'ATTACK_E';
+        } else if (Math.random() > 0.75 && this.isGrounded) {
+          // Dynamic jump-in mixup to keep pressure without spending CE
+          this.vel.y = -13;
+          this.vel.x = (this.facingRight ? 1 : -1) * 7;
+          this.state = 'APPROACH';
+        } else {
+          this.state = 'SPACING';
+        }
+        return;
+      }
+
+      // Far distance (> 320px): Close in to maintain combat engagement
+      this.state = 'APPROACH';
+      return;
+    }
+
+    // -------------------------------------------------------------
+    // 10. POST-DOMAIN / FULL OFFENSE (WHEN DOMAIN IS SPENT / ON CD)
+    // -------------------------------------------------------------
+    if (absDist > 450) {
+      this.state = 'APPROACH';
+    } else if (absDist > 200) {
+      if (this.energy >= E_COST && this.cooldowns.e <= 0 && Math.random() > 0.3) {
+        this.state = 'ATTACK_E';
+      } else if (this.energy >= Q_COST && this.cooldowns.q <= 0 && Math.random() > 0.4) {
+        this.state = 'ATTACK_Q';
+      } else {
+        this.state = 'APPROACH';
+      }
+    } else {
+      // Close quarters infighting
+      if (this.energy >= Q_COST && this.cooldowns.q <= 0) {
+        this.state = 'ATTACK_Q';
+      } else if (this.energy >= E_COST && this.cooldowns.e <= 0 && Math.random() > 0.4) {
+        this.state = 'ATTACK_E';
+      } else if (Math.random() > 0.45) {
+        this.crossUpOverTarget();
+      } else {
+        this.state = 'COMBO_RUSH';
+      }
+    }
+  }
+
+  private crossUpOverTarget() {
+    if (!this.target) return;
+    this.state = 'CROSS_UP';
+    this.stateTimer = 400;
+    const dir = this.target.pos.x > this.pos.x ? 1 : -1;
+    this.crossUpDirection = dir;
+    if (this.isGrounded) {
+      this.vel.y = -15; // High athletic leap over opponent
+      this.vel.x = dir * 11;
+      this.isGrounded = false;
     }
   }
 
@@ -209,60 +423,84 @@ export class Abonant extends Entity {
     activeBeams?: any[],
     visualSlashes?: any[]
   ) {
-    let speed = 4;
-    if (this.characterType === 'Gojo') speed *= 1.1; // Gojo is 10% faster
+    let speed = 4.6;
+    if (this.characterType === 'Gojo') speed *= 1.12;
     if (this.staminaPenaltyTimer > 0) speed *= 0.7;
-    if (isSukunaDomainActive) speed *= 0.5; // 50% slow
-    if (this.brainDamageTimer > 0) speed *= 0.7; // 30% slow
-    if (this.slowTimer > 0) speed *= 0.7; // 30% slow
+    if (isSukunaDomainActive) speed *= 0.5;
+    if (this.brainDamageTimer > 0) speed *= 0.7;
+    if (this.slowTimer > 0) speed *= 0.7;
 
     if (this.stunTimer > 0) {
-      // Stunned, cannot move or attack
       this.state = 'IDLE';
+      return;
     }
 
-    // Input Latency (70ms delay)
-    // We can simulate this by randomly dropping state execution or delaying it.
-    // For simplicity, if latencyTimer > 0, we have a chance to just IDLE.
-    if (this.latencyTimer > 0 && Math.random() < 0.3) {
+    if (this.latencyTimer > 0 && Math.random() < 0.2) {
       this.state = 'IDLE';
+      return;
     }
 
     switch (this.state) {
       case 'APPROACH':
         this.vel.x = this.facingRight ? speed : -speed;
         break;
-      case 'RETREAT':
-        this.vel.x = this.facingRight ? -speed : speed;
-        if (Math.random() > 0.90 && this.isGrounded) {
-          this.vel.y = -12; // Active hop away
+
+      case 'SPACING':
+        if (this.target) {
+          const currentDist = Math.abs(this.target.pos.x - this.pos.x);
+          const targetDist = this.spacingTargetDist;
+          
+          if (currentDist < targetDist - 30) {
+            // Soft spacing back-step (never endless retreat)
+            this.vel.x = this.facingRight ? -speed * 0.75 : speed * 0.75;
+          } else if (currentDist > targetDist + 30) {
+            // Advance smoothly
+            this.vel.x = this.facingRight ? speed * 0.85 : -speed * 0.85;
+          } else {
+            // Neutral weave footsies
+            this.vel.x = (Math.sin(Date.now() * 0.008)) * (speed * 0.5);
+          }
         }
         break;
-      case 'BAIT':
-        // Move erratically just outside range
-        this.vel.x = (Math.random() > 0.5 ? speed * 1.3 : -speed * 1.3);
-        if (Math.random() > 0.88 && this.isGrounded) {
-           this.vel.y = -12; // Active short hop
+
+      case 'CROSS_UP':
+        this.vel.x = this.crossUpDirection * (speed * 1.6);
+        if (this.stateTimer <= 0) {
+          this.state = 'SPACING';
         }
         break;
-      case 'DESPERATION':
-        // Maximize damage, spam Q and E
-        this.vel.x = this.facingRight ? speed * 1.5 : -speed * 1.5;
-        if (this.energy >= Q_COST && this.cooldowns.q <= 0) {
-           this.state = 'ATTACK_Q';
-        } else if (this.energy >= E_COST && this.cooldowns.e <= 0) {
-           this.state = 'ATTACK_E';
+
+      case 'COMBO_RUSH':
+        this.vel.x = this.facingRight ? speed * 1.35 : -speed * 1.35;
+        if (this.isGrounded && Math.random() > 0.85) {
+          this.vel.y = -11;
         }
         break;
+
+      case 'TACTICAL_BACKSTEP':
+        this.vel.x = this.facingRight ? -speed * 0.9 : speed * 0.9;
+        if (this.isGrounded && Math.random() > 0.8) {
+          this.vel.y = -10;
+        }
+        break;
+
+      case 'DOMAIN':
+        // Ready to cast Domain Expansion in GameEngine
+        this.vel.x *= 0.8;
+        break;
+
       case 'ATTACK_E':
         if (this.target) {
           this.facingRight = this.target.pos.x + this.target.width / 2 > this.pos.x + this.width / 2;
         }
         const activeCharacterTypeE = this.mimicryTarget || this.characterType;
+        
         if (activeCharacterTypeE === 'Sukuna') {
           if (!isSukunaDomainActive) {
             if (this.eChargeTimer === 0 && this.energy >= E_COST && this.cooldowns.e <= 0) {
-              this.aiChargeTarget = Math.random() * 1500; // Charge up to 1.5s
+              // Smart charge calculation based on distance (0.4s to 1.1s)
+              const dist = this.target ? Math.abs(this.target.pos.x - this.pos.x) : 250;
+              this.aiChargeTarget = Math.min(1200, 350 + dist * 1.5);
               this.eChargeTimer += dt;
             } else if (this.eChargeTimer > 0) {
               this.eChargeTimer += dt;
@@ -273,7 +511,7 @@ export class Abonant extends Entity {
                 this.eChargeTimer = 0;
                 
                 fireSukunaE(this, chargeTime, projectiles, particles, () => soundManager.playBlast());
-                this.state = 'IDLE';
+                this.state = 'SPACING';
               }
             } else {
               this.state = 'IDLE';
@@ -289,8 +527,7 @@ export class Abonant extends Entity {
                 // Blocked
               } else {
                 this.energy -= E_COST;
-                let baseECooldown = 800;
-                this.cooldowns.e = baseECooldown;
+                this.cooldowns.e = 800;
                 
                 if (this.yujiDomainEWindowTimer <= 0) {
                   this.yujiDomainEWindowTimer = 5000;
@@ -303,11 +540,10 @@ export class Abonant extends Entity {
               }
             } else {
               this.energy -= E_COST;
-              let baseECooldown = 800;
-              this.cooldowns.e = baseECooldown;
+              this.cooldowns.e = 800;
               
-              let vx = (this.facingRight ? 15 : -15);
-              let vy = 0;
+              const vx = (this.facingRight ? 16 : -16);
+              const vy = 0;
               
               let projColor = '#00ffff';
               let variant = 'normal';
@@ -319,7 +555,11 @@ export class Abonant extends Entity {
                 variant = isPull ? 'pull' : 'knockback';
               }
               
-              projectiles.push(new Projectile(this.pos.x + (this.facingRight ? this.width : -20), this.pos.y + 20, vx, vy, this.id, projColor, 'E', activeCharacterTypeE, 0, 0, variant));
+              projectiles.push(new Projectile(
+                this.pos.x + (this.facingRight ? this.width : -20), 
+                this.pos.y + 20, 
+                vx, vy, this.id, projColor, 'E', activeCharacterTypeE, 0, 0, variant
+              ));
               
               for(let i=0; i<15; i++) {
                 particles.push(new Particle(
@@ -330,30 +570,29 @@ export class Abonant extends Entity {
               }
             }
           }
-          this.state = 'IDLE';
+          this.state = 'SPACING';
         }
         break;
+
       case 'ATTACK_Q':
         const activeCharacterTypeQ = this.mimicryTarget || this.characterType;
         if (this.energy >= Q_COST && this.cooldowns.q <= 0 && !this.qDisabled) {
           if (activeCharacterTypeQ === 'Sukuna' && isSukunaDomainActive) {
             this.energy -= Q_COST;
-            this.cooldowns.q = 1000; // 1 second cooldown (reduced by 50%)
-            
+            this.cooldowns.q = 1000;
             fireSukunaQDomain(this, this.target, projectiles, particles, () => soundManager.playSlash(), triggerShake);
-            
             this.vel.x = 0;
             this.state = 'IDLE';
           } else {
             this.energy -= Q_COST;
             this.cooldowns.q = 1500;
             this.phaseTimer = 15 * 16.66;
-            let dashSpeed = 20;
+            let dashSpeed = 22;
             if (activeCharacterTypeQ === 'Gojo' || activeCharacterTypeQ === 'Megumi' || activeCharacterTypeQ === 'Hakari' || activeCharacterTypeQ === 'Sukuna') {
               dashSpeed *= 1.25;
             }
             if (isYujiDomainActive && activeCharacterTypeQ === 'Yuji') {
-              dashSpeed *= 2.0; // Dash twice as far in Yuji's domain
+              dashSpeed *= 2.0;
             }
             
             if (activeCharacterTypeQ === 'Megumi') {
@@ -382,11 +621,11 @@ export class Abonant extends Entity {
             }
           }
         }
-        this.state = 'IDLE';
+        this.state = 'SPACING';
         break;
+
       case 'IDLE':
       default:
-        // Friction stops
         break;
     }
   }
