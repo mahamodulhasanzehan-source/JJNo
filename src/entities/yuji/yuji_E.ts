@@ -48,10 +48,9 @@ export function fireYujiDomainE(
   }
 
   if (target) {
-    // "Impossible to dodge if you are at the same level as Yuji"
-    // Vertical bounds overlap test (+/- margin)
-    const ownerYTop = owner.pos.y - 30;
-    const ownerYBot = owner.pos.y + owner.height + 30;
+    // Sure-hit domain laser beam: connects whenever owner is facing the target in the arena
+    const ownerYTop = owner.pos.y - 150;
+    const ownerYBot = owner.pos.y + owner.height + 150;
     const targetYTop = target.pos.y;
     const targetYBot = target.pos.y + target.height;
 

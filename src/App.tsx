@@ -11,7 +11,7 @@ const KANJI_MAP: Record<CharacterType, { kanji: string, domain: string }> = {
   Yuji: { kanji: "虎杖 悠仁", domain: "Benevolent Boxing" },
   Gojo: { kanji: "五条 悟", domain: "Unlimited Void" },
   Sukuna: { kanji: "両面 宿儺", domain: "Malevolent Shrine" },
-  Megumi: { kanji: "伏黒 恵", domain: "Shadow Garden" },
+  Megumi: { kanji: "伏黒 恵", domain: "Mahoraga Summon" },
   Hakari: { kanji: "秤 金次", domain: "Idle Death Gamble" }
 };
 

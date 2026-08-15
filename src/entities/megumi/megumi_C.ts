@@ -1,21 +1,9 @@
 import { Entity } from '../../game/Entity';
+import { Mahoraga } from '../mahoraga/Mahoraga';
 
-export function handleMegumiDomainInput(player: Entity, domainManager: any) {
-  // Activate Domain Expansion: Chimera Shadow Garden
-  domainManager.active = true;
-  domainManager.type = 'Megumi';
-  domainManager.ownerId = player.id;
-  domainManager.timer = 10000; // 10 seconds
-  
-  // Initialize Shikigami
-  domainManager.shikigami = {
-    nue: [
-      { x: player.pos.x - 100, y: player.pos.y - 150, timer: 0 },
-      { x: player.pos.x + 100, y: player.pos.y - 150, timer: 0 }
-    ],
-    dogs: [
-      { x: player.pos.x - 50, y: player.pos.y, state: 'idle', cooldown: 0, dashTimer: 0, startX: 0, targetX: 0 },
-      { x: player.pos.x + 50, y: player.pos.y, state: 'idle', cooldown: 0, dashTimer: 0, startX: 0, targetX: 0 }
-    ]
-  };
+export function handleMegumiSummonMahoraga(player: Entity, target: Entity): Mahoraga {
+  player.hasSpawnedMahoraga = true;
+  const spawnX = player.pos.x + (player.facingRight ? 120 : -120);
+  const mahoraga = new Mahoraga(spawnX, player.pos.y, player.id, player.facingRight);
+  return mahoraga;
 }

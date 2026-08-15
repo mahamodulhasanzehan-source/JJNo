@@ -176,78 +176,223 @@ export class Projectile {
       ctx.lineTo(x + Math.cos(angle) * 60, y + Math.sin(angle) * 60);
       ctx.stroke();
     } else if (this.characterType === 'Gojo') {
-      const time = Date.now();
-      // Multi-layered Hollow Purple / Limitless glow
-      ctx.globalAlpha = 0.8;
-      
-      // Outer ripple
-      ctx.strokeStyle = `rgba(138, 43, 226, ${Math.abs(Math.sin(time*0.01))})`;
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(x + 10, y + 10, 25 + Math.sin(time*0.02) * 5, 0, Math.PI * 2);
-      ctx.stroke();
+      const time = performance.now() / 150;
+      const cx = x + this.width / 2;
+      const cy = y + this.height / 2;
+      const r = 16 + this.sizeOverride * 0.5;
 
-      const grad = ctx.createRadialGradient(x + 10, y + 10, 0, x + 10, y + 10, 20);
+      // 1. Concentric pulsing limitless aura
+      const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 1.5);
       grad.addColorStop(0, '#ffffff');
-      grad.addColorStop(0.3, '#ff00ff');
-      grad.addColorStop(0.8, '#8a2be2');
-      grad.addColorStop(1, 'rgba(0,0,0,0)');
-      
+      grad.addColorStop(0.25, '#e879f9');
+      grad.addColorStop(0.6, '#9333ea');
+      grad.addColorStop(1, 'rgba(88, 28, 135, 0)');
       ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(x + 10, y + 10, 20, 0, Math.PI * 2);
+      ctx.arc(cx, cy, r * 1.5, 0, Math.PI * 2);
       ctx.fill();
-      
-      // Reality distortion black hole in the center
-      ctx.fillStyle = '#000000';
+
+      // 2. Void Core (Micro Singularity)
+      ctx.fillStyle = '#05000a';
       ctx.beginPath();
-      ctx.arc(x + 10, y + 10, 5, 0, Math.PI * 2);
+      ctx.arc(cx, cy, r * 0.45, 0, Math.PI * 2);
       ctx.fill();
-      
-      ctx.globalAlpha = 1.0;
-    } else if (this.characterType === 'Sukuna') {
-      ctx.strokeStyle = '#e74c3c';
-      ctx.lineWidth = 6;
-      ctx.lineCap = 'round';
-      ctx.shadowColor = '#ff0000';
-      ctx.shadowBlur = 10;
-      const isRight = this.vel.x > 0;
-      
-      // Triple slash effect
-      for (let i = -1; i <= 1; i++) {
+
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // 3. Dual Red/Blue Infinity Orbital Rings
+      ctx.lineWidth = 2.5;
+      for (let i = 0; i < 2; i++) {
+        const offset = i === 0 ? time * 2 : -time * 2;
+        ctx.strokeStyle = i === 0 ? '#38bdf8' : '#f43f5e';
         ctx.beginPath();
-        ctx.moveTo(x + (isRight ? -10 : 30) + i * 5, y - 15 + i * 10);
-        ctx.quadraticCurveTo(x + (isRight ? 40 : -20), y + 10, x + (isRight ? -10 : 30) - i * 5, y + 35 - i * 10);
+        ctx.arc(cx, cy, r * 0.85, offset, offset + Math.PI * 0.9);
         ctx.stroke();
       }
-    } else if (this.characterType === 'Yuji') {
-      // Divergent Fist / Black Flash energy
-      const time = Date.now();
-      const isBlackFlash = Math.random() > 0.8; 
-      const energyColor = isBlackFlash ? '#000000' : '#f1c40f';
-      const auraColor = isBlackFlash ? '#ff0000' : '#ffffff';
 
-      ctx.shadowColor = auraColor;
-      ctx.shadowBlur = 20;
+    } else if (this.characterType === 'Sukuna') {
+      const time = performance.now() / 100;
+      const cx = x + this.width / 2;
+      const cy = y + this.height / 2;
+      const isRight = this.vel.x > 0;
 
-      ctx.fillStyle = energyColor;
-      ctx.translate(x + 10, y + 10);
-      ctx.rotate(time * 0.01);
-      
+      ctx.shadowColor = '#ef4444';
+      ctx.shadowBlur = 18;
+
+      // Blood-red Demonic Cleave Crescent Arc
+      const mainAngle = Math.atan2(this.vel.y, this.vel.x);
+      ctx.translate(cx, cy);
+      ctx.rotate(mainAngle);
+
+      // Primary razor slash blade
+      ctx.fillStyle = '#991b1b';
       ctx.beginPath();
-      ctx.rect(-10 - Math.random() * 5, -10 - Math.random() * 5, 20 + Math.random() * 10, 20 + Math.random() * 10);
+      ctx.moveTo(18, 0);
+      ctx.quadraticCurveTo(-10, -22, -26, -26);
+      ctx.quadraticCurveTo(-14, 0, -26, 26);
+      ctx.quadraticCurveTo(-10, 22, 18, 0);
       ctx.fill();
+
+      // Inner glowing crimson core
+      ctx.fillStyle = '#f87171';
+      ctx.beginPath();
+      ctx.moveTo(14, 0);
+      ctx.quadraticCurveTo(-6, -14, -18, -18);
+      ctx.quadraticCurveTo(-8, 0, -18, 18);
+      ctx.quadraticCurveTo(-6, 14, 14, 0);
+      ctx.fill();
+
+      // Pure white razor edge
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-26, -26);
+      ctx.quadraticCurveTo(8, -14, 18, 0);
+      ctx.quadraticCurveTo(8, 14, -26, 26);
+      ctx.stroke();
+
+      // Sharp secondary bleed ticks
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-10, -15);
+      ctx.lineTo(-20, -22);
+      ctx.moveTo(-10, 15);
+      ctx.lineTo(-20, 22);
+      ctx.stroke();
+
+    } else if (this.characterType === 'Yuji') {
+      // Divergent Fist / Cursed Martial Arts Impact Core
+      const time = performance.now() / 80;
+      const cx = x + this.width / 2;
+      const cy = y + this.height / 2;
       
-      ctx.strokeStyle = auraColor;
+      ctx.translate(cx, cy);
+      ctx.rotate(time * 0.6);
+
+      // Outer gold/flame impact polygon
+      ctx.shadowColor = '#f59e0b';
+      ctx.shadowBlur = 20;
+      ctx.fillStyle = '#b45309';
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI / 3) * i;
+        const rad = i % 2 === 0 ? 18 : 12;
+        const px = Math.cos(a) * rad;
+        const py = Math.sin(a) * rad;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+
+      // Intense Amber/Red Cursed Aura Core
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI / 3) * i + Math.PI / 6;
+        const rad = i % 2 === 0 ? 12 : 8;
+        const px = Math.cos(a) * rad;
+        const py = Math.sin(a) * rad;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+
+      // White hot core
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(0, 0, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Divergent second shock wave outline
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-12, -12, 24, 24);
+
+    } else if (this.characterType === 'Megumi') {
+      // Ten Shadows Shikigami Talisman / Dark Shadow Shuriken
+      const time = performance.now() / 90;
+      const cx = x + this.width / 2;
+      const cy = y + this.height / 2;
+
+      ctx.translate(cx, cy);
+      ctx.rotate(time * 1.5);
+
+      ctx.shadowColor = '#38bdf8';
+      ctx.shadowBlur = 18;
+
+      // Dark shadow shuriken 4-point star
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      for (let i = 0; i < 8; i++) {
+        const a = (Math.PI / 4) * i;
+        const rad = i % 2 === 0 ? 19 : 7;
+        const px = Math.cos(a) * rad;
+        const py = Math.sin(a) * rad;
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.fill();
+
+      // Cursed blue sacred pattern edges
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Shikigami eye in center
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+    } else if (this.characterType === 'Hakari') {
+      // Pachinko / Roulette Gold & Neon Jackpot Token
+      const time = performance.now() / 110;
+      const cx = x + this.width / 2;
+      const cy = y + this.height / 2;
+
+      ctx.translate(cx, cy);
+      ctx.rotate(time * 1.2);
+
+      ctx.shadowColor = '#f43f5e';
+      ctx.shadowBlur = 22;
+
+      // Bright Pink / Cyan Neon Dice Token
+      ctx.fillStyle = '#ec4899';
+      ctx.fillRect(-12, -12, 24, 24);
+
+      ctx.strokeStyle = '#06b6d4';
       ctx.lineWidth = 3;
-      ctx.strokeRect(-15, -15, 30, 30);
+      ctx.strokeRect(-12, -12, 24, 24);
+
+      // Gold Lucky 7 / Jackpot center indicator
+      ctx.fillStyle = '#fde047';
+      ctx.beginPath();
+      ctx.arc(0, 0, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Sparkle cross
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-9, 0);
+      ctx.lineTo(9, 0);
+      ctx.moveTo(0, -9);
+      ctx.lineTo(0, 9);
+      ctx.stroke();
+
     } else {
       ctx.shadowColor = this.color;
       ctx.shadowBlur = 20;
       ctx.fillStyle = this.color;
       // Drawing a crystal-like shape
       ctx.translate(x + this.width / 2, y + this.height / 2);
-      ctx.rotate(Date.now() * + 0.01);
+      ctx.rotate(Date.now() * 0.01);
       ctx.beginPath();
       ctx.moveTo(0, -this.height / 1.5);
       ctx.lineTo(this.width / 1.5, 0);

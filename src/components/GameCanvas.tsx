@@ -130,9 +130,9 @@ export default function GameCanvas({ character, opponentCharacter, networkMatch 
       <HUD gameState={gameState} />
       <div className="absolute bottom-4 left-4 text-xs text-gray-400 space-y-1 pointer-events-none font-mono opacity-50">
         <p>[A/D] Move | [Space] Jump | [Shift] Dash</p>
-        <p>[E] Energy Blast (5 CE)</p>
-        <p>[Q] Cursed Dash (10 CE)</p>
-        <p>[C] Domain Expansion (60 CE)</p>
+        <p>[E] Cursed Strike / Projectile (5 CE)</p>
+        <p>[Q] Cursed Technique (10 CE)</p>
+        <p>[C] Domain Expansion / Summon (Cursed Energy Required)</p>
         {networkMatch && <p className="text-red-500 mt-2">Multiplayer Mode: {networkMatch.role.toUpperCase()}</p>}
       </div>
       <EndGameScreen 

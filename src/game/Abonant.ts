@@ -141,21 +141,21 @@ export class Abonant extends Entity {
       return;
     }
 
-    // Domain Usage: Be much more proactive if we have the energy
-    const domainCost = this.characterType === 'Gojo' ? 75 : 70;
-    if (this.energy >= domainCost && this.cooldowns.c <= 0 && !isSukunaDomainActive && !isYujiDomainActive) {
+    // Domain Usage: Be much more proactive if we have the energy (Blocked for Hakari during Infinite CE, Megumi once per match with 90 CE)
+    const domainCost = this.characterType === 'Gojo' ? 75 : (this.characterType === 'Megumi' ? 90 : 70);
+    const canUseDomain = !(this.characterType === 'Hakari' && this.infiniteCeTimer > 0) &&
+                         !(this.characterType === 'Megumi' && this.hasSpawnedMahoraga);
+    if (this.energy >= domainCost && this.cooldowns.c <= 0 && !isSukunaDomainActive && !isYujiDomainActive && canUseDomain) {
        if (Math.random() > 0.05) { // 95% chance to use domain when available
            this.state = 'DOMAIN';
            return;
        }
     }
 
-    if (this.target.energy >= 50 && Math.random() > 0.7 && !isEnemyDomainActive) {
+    if (this.target.energy >= 50 && Math.random() > 0.7) {
        this.state = 'DESPERATION';
        return;
     }
-
-
 
     // Movement and Attack Logic
     if (absDist > 500) {
@@ -196,11 +196,6 @@ export class Abonant extends Entity {
         this.state = 'RETREAT';
       }
     }
-
-    // Block abilities in enemy domain (but allow DOMAIN overriding if possible)
-    if (isEnemyDomainActive && (this.state === 'ATTACK_E' || this.state === 'ATTACK_Q')) {
-      this.state = absDist < 250 ? (Math.random() > 0.3 ? 'RETREAT' : 'BAIT') : (Math.random() > 0.5 ? 'APPROACH' : 'BAIT');
-    }
   }
 
   executeState(
@@ -220,13 +215,6 @@ export class Abonant extends Entity {
     if (isSukunaDomainActive) speed *= 0.5; // 50% slow
     if (this.brainDamageTimer > 0) speed *= 0.7; // 30% slow
     if (this.slowTimer > 0) speed *= 0.7; // 30% slow
-
-    if (isYujiDomainActive) {
-      if (this.state === 'ATTACK_Q' || this.state === 'DOMAIN') {
-        const absDist = this.target ? Math.abs(this.target.pos.x - this.pos.x) : 300;
-        this.state = absDist < 250 ? 'RETREAT' : 'APPROACH';
-      }
-    }
 
     if (this.stunTimer > 0) {
       // Stunned, cannot move or attack
@@ -267,6 +255,9 @@ export class Abonant extends Entity {
         }
         break;
       case 'ATTACK_E':
+        if (this.target) {
+          this.facingRight = this.target.pos.x + this.target.width / 2 > this.pos.x + this.width / 2;
+        }
         const activeCharacterTypeE = this.mimicryTarget || this.characterType;
         if (activeCharacterTypeE === 'Sukuna') {
           if (!isSukunaDomainActive) {

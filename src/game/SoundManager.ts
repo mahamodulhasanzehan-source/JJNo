@@ -214,6 +214,68 @@ export class SoundManager {
     }
     return curve;
   }
+
+  playWheelClick() {
+    if (!this.ctx) return;
+    this.init();
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(1400, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(700, this.ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.08);
+  }
+
+  playMahoragaSummon() {
+    if (!this.ctx) return;
+    this.init();
+    // Deep sub-bass resonance + high chime
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(80, this.ctx.currentTime);
+    osc.frequency.linearRampToValueAtTime(40, this.ctx.currentTime + 1.8);
+    gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 1.8);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 1.8);
+
+    // Chime
+    const chime = this.ctx.createOscillator();
+    const chimeGain = this.ctx.createGain();
+    chime.type = 'sine';
+    chime.frequency.setValueAtTime(880, this.ctx.currentTime);
+    chime.frequency.exponentialRampToValueAtTime(1760, this.ctx.currentTime + 1.2);
+    chimeGain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+    chimeGain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 1.2);
+    chime.connect(chimeGain);
+    chimeGain.connect(this.ctx.destination);
+    chime.start();
+    chime.stop(this.ctx.currentTime + 1.2);
+  }
+
+  playHeavySlam() {
+    if (!this.ctx) return;
+    this.init();
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.4);
+    gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.4);
+  }
 }
 
 export const soundManager = new SoundManager();

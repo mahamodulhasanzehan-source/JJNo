@@ -52,6 +52,7 @@ export class Entity {
   sukunaQTimer: number = 0;
   
   isDismantled: boolean = false;
+  hasSpawnedMahoraga: boolean = false;
   
   characterType: CharacterType;
   color: string;

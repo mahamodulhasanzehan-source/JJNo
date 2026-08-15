@@ -20,7 +20,8 @@ import { handleSukunaDomainInput } from '../entities/sukuna/sukuna_C';
 
 import { applyMegumiE } from '../entities/megumi/megumi_E';
 import { applyMegumiQ } from '../entities/megumi/megumi_Q';
-import { handleMegumiDomainInput } from '../entities/megumi/megumi_C';
+import { handleMegumiSummonMahoraga } from '../entities/megumi/megumi_C';
+import { Mahoraga } from '../entities/mahoraga/Mahoraga';
 
 import { applyHakariE } from '../entities/hakari/hakari_E';
 import { applyHakariQ } from '../entities/hakari/hakari_Q';
@@ -32,6 +33,7 @@ export class GameEngine {
   player: Player;
   abonant: Abonant;
   domainManager: DomainManager;
+  mahoraga: Mahoraga | null = null;
   
   particles: Particle[] = [];
   projectiles: Projectile[] = [];
@@ -254,6 +256,52 @@ export class GameEngine {
     }
   }
 
+  triggerYujiBurst(x: number, y: number) {
+    this.triggerShake(14);
+    const mult = this.graphicsMode === 'HIGH' ? 3 : 1;
+    for (let i = 0; i < 25 * mult; i++) {
+      this.particles.push(new Particle(
+        x, y, (Math.random() - 0.5) * 35, (Math.random() - 0.5) * 35,
+        400 + Math.random() * 300,
+        Math.random() > 0.4 ? '#ef4444' : '#fbbf24',
+        6 + Math.random() * 8,
+        'rect',
+        { friction: 0.9, scaleInOut: true, angularVel: (Math.random() - 0.5) * 1.0 }
+      ));
+    }
+  }
+
+  triggerMegumiShadowBurst(x: number, y: number) {
+    this.triggerShake(12);
+    const mult = this.graphicsMode === 'HIGH' ? 3 : 1;
+    for (let i = 0; i < 30 * mult; i++) {
+      this.particles.push(new Particle(
+        x, y, (Math.random() - 0.5) * 25, (Math.random() - 0.5) * 25 - 3,
+        500 + Math.random() * 300,
+        Math.random() > 0.5 ? '#1e1b4b' : '#38bdf8',
+        5 + Math.random() * 9,
+        'circle',
+        { friction: 0.92, scaleInOut: true }
+      ));
+    }
+  }
+
+  triggerHakariJackpotBurst(x: number, y: number) {
+    this.triggerShake(15);
+    const mult = this.graphicsMode === 'HIGH' ? 3 : 1;
+    const colors = ['#f43f5e', '#06b6d4', '#eab308', '#ec4899'];
+    for (let i = 0; i < 28 * mult; i++) {
+      this.particles.push(new Particle(
+        x, y, (Math.random() - 0.5) * 40, (Math.random() - 0.5) * 40,
+        450 + Math.random() * 300,
+        colors[Math.floor(Math.random() * colors.length)],
+        6 + Math.random() * 10,
+        'star',
+        { friction: 0.9, scaleInOut: true, angularVel: (Math.random() - 0.5) * 1.2 }
+      ));
+    }
+  }
+
   triggerSlashOverlay(x: number, y: number) {
     this.triggerShake(25);
     this.chromaticAberration = 20;
@@ -433,32 +481,54 @@ export class GameEngine {
     this.lastMouseDown = this.input.mouse.isDown;
 
     // Domain Expansion Input (Player)
-    const playerDomainCost = this.player.characterType === 'Gojo' ? 75 : C_COST;
-    const canPlayerActivateDomain = !this.domainManager.active || this.domainManager.type !== 'Yuji';
+    const playerDomainCost = this.player.characterType === 'Gojo' ? 75 : (this.player.characterType === 'Megumi' ? 90 : C_COST);
+    const canPlayerActivateDomain = (!this.domainManager.active || this.domainManager.type !== 'Yuji') && 
+      !(this.player.characterType === 'Hakari' && this.player.infiniteCeTimer > 0) &&
+      !(this.player.characterType === 'Megumi' && this.player.hasSpawnedMahoraga);
     if (this.input.isKeyDown('c') && this.player.energy >= playerDomainCost && this.player.cooldowns.c <= 0 && canPlayerActivateDomain) {
-      this.player.energy -= playerDomainCost;
-      this.player.cooldowns.c = 1000; // 1s cooldown to prevent double taps
-      this.domainManager.activate(this.player.id, this.player.characterType);
-      this.chromaticAberration = 10;
-      this.triggerShake(10);
-      soundManager.playDomainActivation();
-      if (this.player.characterType === 'Yuji') {
-        soundManager.playBoxingBell();
+      if (this.player.characterType === 'Megumi') {
+        this.player.energy -= 90;
+        this.player.cooldowns.c = 2000;
+        this.player.hasSpawnedMahoraga = true;
+        this.mahoraga = handleMegumiSummonMahoraga(this.player, this.abonant);
+        this.chromaticAberration = 8;
+        this.triggerShake(14);
+      } else {
+        this.player.energy -= playerDomainCost;
+        this.player.cooldowns.c = 1000; // 1s cooldown to prevent double taps
+        this.domainManager.activate(this.player.id, this.player.characterType);
+        this.chromaticAberration = 10;
+        this.triggerShake(10);
+        soundManager.playDomainActivation();
+        if (this.player.characterType === 'Yuji') {
+          soundManager.playBoxingBell();
+        }
       }
     }
 
     // Domain Expansion (Abonant)
-    const abonantDomainCost = this.abonant.characterType === 'Gojo' ? 75 : C_COST;
-    const canAbonantActivateDomain = !this.domainManager.active || this.domainManager.type !== 'Yuji';
+    const abonantDomainCost = this.abonant.characterType === 'Gojo' ? 75 : (this.abonant.characterType === 'Megumi' ? 90 : C_COST);
+    const canAbonantActivateDomain = (!this.domainManager.active || this.domainManager.type !== 'Yuji') && 
+      !(this.abonant.characterType === 'Hakari' && this.abonant.infiniteCeTimer > 0) &&
+      !(this.abonant.characterType === 'Megumi' && this.abonant.hasSpawnedMahoraga);
     if (this.abonant.state === 'DOMAIN' && this.abonant.energy >= abonantDomainCost && this.abonant.cooldowns.c <= 0 && canAbonantActivateDomain) {
-      this.abonant.energy -= abonantDomainCost;
-      this.abonant.cooldowns.c = 1000; // 1s cooldown
-      this.domainManager.activate(this.abonant.id, this.abonant.characterType);
-      this.chromaticAberration = 10;
-      this.triggerShake(10);
-      soundManager.playDomainActivation();
-      if (this.abonant.characterType === 'Yuji') {
-        soundManager.playBoxingBell();
+      if (this.abonant.characterType === 'Megumi') {
+        this.abonant.energy -= 90;
+        this.abonant.cooldowns.c = 2000;
+        this.abonant.hasSpawnedMahoraga = true;
+        this.mahoraga = handleMegumiSummonMahoraga(this.abonant, this.player);
+        this.chromaticAberration = 8;
+        this.triggerShake(14);
+      } else {
+        this.abonant.energy -= abonantDomainCost;
+        this.abonant.cooldowns.c = 1000; // 1s cooldown
+        this.domainManager.activate(this.abonant.id, this.abonant.characterType);
+        this.chromaticAberration = 10;
+        this.triggerShake(10);
+        soundManager.playDomainActivation();
+        if (this.abonant.characterType === 'Yuji') {
+          soundManager.playBoxingBell();
+        }
       }
     }
 
@@ -468,90 +538,21 @@ export class GameEngine {
     this.domainManager.update(dt, this.particles);
     const isDomainActive = this.domainManager.active;
 
-    // Apply 1s burnout cooldown when a domain ends
+    // Apply 5s (5000ms) burnout cooldown when any domain ends
     if (wasDomainActive && !isDomainActive) {
-      if (this.player.cooldowns.c < 1000) this.player.cooldowns.c = 1000;
-      if (this.abonant.cooldowns.c < 1000) this.abonant.cooldowns.c = 1000;
+      this.player.cooldowns.c = 5000;
+      this.abonant.cooldowns.c = 5000;
       // Add a visual burnout indication (gray screen flash or screen shake)
       this.triggerShake(5);
     }
 
-    // Megumi Domain Shikigami Logic
-    if (isDomainActive && this.domainManager.type === 'Megumi' && this.domainManager.shikigami) {
-      const owner = this.domainManager.ownerId === this.player.id ? this.player : this.abonant;
-      const target = this.domainManager.ownerId === this.player.id ? this.abonant : this.player;
-      
-      // Nue (Flying)
-      this.domainManager.shikigami.nue.forEach((nue, index) => {
-        // Hover above target loosely, roaming freely
-        const targetX = target.pos.x + Math.sin(Date.now() * 0.002 + index * Math.PI) * 200;
-        const targetY = target.pos.y - 250 + Math.cos(Date.now() * 0.003 + index * Math.PI) * 80;
-        nue.x += (targetX - nue.x) * 0.03;
-        nue.y += (targetY - nue.y) * 0.03;
-        
-        nue.timer -= dt;
-        if (nue.timer <= 0) {
-          nue.timer = 666 + Math.random() * 333; // Fire 3x faster (every 0.66-1 seconds)
-          const dx = target.pos.x + target.width/2 - nue.x;
-          const dy = target.pos.y + target.height/2 - nue.y;
-          const dist = Math.sqrt(dx*dx + dy*dy);
-          const speed = 20; // 2x faster projectiles
-          this.projectiles.push(new Projectile(nue.x, nue.y, (dx/dist)*speed, (dy/dist)*speed, owner.id, '#00008b', 'NUE_BLAST', 'Megumi'));
-        }
+    // Mahoraga Summon AI & Physics Loop
+    if (this.mahoraga && this.mahoraga.active) {
+      const mTarget = this.mahoraga.ownerId === this.player.id ? this.abonant : this.player;
+      this.mahoraga.update(dt, this.groundY, mTarget, this.particles, this.projectiles, (x, y) => {
+        this.triggerShake(20);
+        this.chromaticAberration = 15;
       });
-      
-      // Divine Dogs (Ground)
-      this.domainManager.shikigami.dogs.forEach((dog, index) => {
-        if (dog.cooldown > 0) dog.cooldown -= dt;
-        
-        if (dog.state === 'idle') {
-          // Prowl around target loosely, not forced left/right
-          const targetX = target.pos.x + Math.sin(Date.now() * 0.004 + index * Math.PI) * 150;
-          dog.x += (targetX - dog.x) * 0.05;
-          dog.y = this.groundY; // Ground level
-          
-          // Check proximity to target
-          const distToTarget = Math.abs(dog.x - (target.pos.x + target.width/2));
-          if (distToTarget < 300 && dog.cooldown <= 0) {
-            dog.state = 'dashing';
-            dog.dashTimer = 600; // 600ms dash
-            dog.startX = dog.x;
-            dog.targetX = target.pos.x + target.width/2 + (dog.x < target.pos.x ? 250 : -250); // Dash through
-          }
-        } else if (dog.state === 'dashing') {
-          dog.dashTimer -= dt;
-          const progress = 1 - Math.max(0, dog.dashTimer / 600);
-          dog.x = dog.startX + (dog.targetX - dog.startX) * progress;
-          
-          // Check collision with target
-          if (Math.abs(dog.x - (target.pos.x + target.width/2)) < 40 && target.phaseTimer <= 0) {
-            if (target.takeDamage(5, true, 'Megumi', owner.id)) { // 5 damage
-              this.triggerHitSpark(target.pos.x + target.width/2, target.pos.y + target.height/2, '#00008b');
-              target.phaseTimer = 200; // Brief invuln
-            }
-          }
-          
-          if (dog.dashTimer <= 0) {
-            dog.state = 'idle';
-            dog.cooldown = 1500; // 1.5 second cooldown
-          }
-        }
-      });
-      
-      // Max Elephant Drop
-      this.domainManager.shikigami.elephantTimer -= dt;
-      if (this.domainManager.shikigami.elephantTimer <= 0) {
-        this.domainManager.shikigami.elephantTimer = 4000;
-        
-        // Spawn Elephant Projectile
-        this.projectiles.push(new Projectile(
-          target.pos.x + target.width/2 - 50, 
-          this.camera.y - 200, // Drop from top of screen
-          0, 25, // Fall straight down fast
-          owner.id, '#4682b4', 'ELEPHANT', 'Megumi',
-          15, 80, 'elephant' // 15 bonus damage, 80 size
-        ));
-      }
     }
 
     // Domain Activation Burst
@@ -1033,12 +1034,12 @@ export class GameEngine {
           if (p.abilityType === 'E' || p.abilityType === 'DOMAIN_E' || p.variant === 'omni_cleave') {
             damage = (4 + p.damageOverride) / 3;
             if (isDomainActive && this.domainManager.type === 'Sukuna' && this.domainManager.ownerId === p.ownerId) {
-              damage *= 0.9; // Reduce E damage by 10% in domain
+              damage *= 0.4; // Reduced by another 50% in domain (0.8 * 0.5 = 0.4)
             }
           } else if (p.abilityType === 'Q' || p.variant === 'world_slash') {
-            damage = Q_DMG + p.damageOverride; // Ensure base Q damage + override
+            damage = Q_DMG + p.damageOverride;
             if (isDomainActive && this.domainManager.type === 'Sukuna' && this.domainManager.ownerId === p.ownerId) {
-              damage *= 0.5; // Reduce Q damage by 50% in domain
+              damage *= 0.8; // Reduce Q damage by 20% in domain
             }
           }
         }
@@ -1083,6 +1084,12 @@ export class GameEngine {
             this.triggerWhiteVoid(p.pos.x, p.pos.y);
           } else if (p.characterType === 'Sukuna') {
             this.triggerSlashOverlay(p.pos.x, p.pos.y);
+          } else if (p.characterType === 'Yuji') {
+            this.triggerYujiBurst(p.pos.x, p.pos.y);
+          } else if (p.characterType === 'Megumi') {
+            this.triggerMegumiShadowBurst(p.pos.x, p.pos.y);
+          } else if (p.characterType === 'Hakari') {
+            this.triggerHakariJackpotBurst(p.pos.x, p.pos.y);
           }
 
           p.active = false;
@@ -1095,12 +1102,12 @@ export class GameEngine {
           if (p.abilityType === 'E' || p.abilityType === 'DOMAIN_E' || p.variant === 'omni_cleave') {
             damage = (4 + p.damageOverride) / 3;
             if (isDomainActive && this.domainManager.type === 'Sukuna' && this.domainManager.ownerId === p.ownerId) {
-              damage *= 0.9; // Reduce E damage by 10% in domain
+              damage *= 0.4; // Reduced by another 50% in domain (0.8 * 0.5 = 0.4)
             }
           } else if (p.abilityType === 'Q' || p.variant === 'world_slash') {
-            damage = Q_DMG + p.damageOverride; // Ensure base Q damage + override
+            damage = Q_DMG + p.damageOverride;
             if (isDomainActive && this.domainManager.type === 'Sukuna' && this.domainManager.ownerId === p.ownerId) {
-              damage *= 0.5; // Reduce Q damage by 50% in domain
+              damage *= 0.8; // Reduce Q damage by 20% in domain
             }
           }
         }
@@ -1148,8 +1155,25 @@ export class GameEngine {
             this.triggerWhiteVoid(p.pos.x, p.pos.y);
           } else if (p.characterType === 'Sukuna') {
             this.triggerSlashOverlay(p.pos.x, p.pos.y);
+          } else if (p.characterType === 'Yuji') {
+            this.triggerYujiBurst(p.pos.x, p.pos.y);
+          } else if (p.characterType === 'Megumi') {
+            this.triggerMegumiShadowBurst(p.pos.x, p.pos.y);
+          } else if (p.characterType === 'Hakari') {
+            this.triggerHakariJackpotBurst(p.pos.x, p.pos.y);
           }
 
+          p.active = false;
+        }
+      }
+
+      // Projectile Collision with Mahoraga
+      if (this.mahoraga && this.mahoraga.active && this.mahoraga.state !== 'dead' && this.mahoraga.state !== 'spawning') {
+        if (p.ownerId !== this.mahoraga.ownerId && this.checkCollision(pRect, this.mahoraga.getRect())) {
+          let damage = E_DMG + p.damageOverride;
+          if (p.abilityType === 'Q') damage = Q_DMG + p.damageOverride;
+          this.mahoraga.takeDamage(damage, this.particles);
+          this.triggerHitSpark(p.pos.x + p.width / 2, p.pos.y + p.height / 2, '#ffd700');
           p.active = false;
         }
       }
@@ -1474,74 +1498,9 @@ export class GameEngine {
     }
     for (const p of this.particles) p.draw(this.ctx, this.camera);
 
-    // Draw Megumi Shikigami
-    if (this.domainManager.active && this.domainManager.type === 'Megumi' && this.domainManager.shikigami) {
-      this.ctx.save();
-      // Nue
-      this.ctx.fillStyle = '#1e90ff'; // Dodger blue
-      this.domainManager.shikigami.nue.forEach(nue => {
-        // Body
-        this.ctx.beginPath();
-        this.ctx.arc(nue.x - this.camera.x, nue.y - this.camera.y, 15, 0, Math.PI * 2);
-        this.ctx.fill();
-        // Mask/Face
-        this.ctx.fillStyle = '#ffffff';
-        this.ctx.beginPath();
-        this.ctx.arc(nue.x - this.camera.x, nue.y - this.camera.y + 5, 8, 0, Math.PI * 2);
-        this.ctx.fill();
-        this.ctx.fillStyle = '#1e90ff';
-        
-        // Wings
-        this.ctx.beginPath();
-        this.ctx.moveTo(nue.x - this.camera.x, nue.y - this.camera.y);
-        this.ctx.lineTo(nue.x - this.camera.x - 40, nue.y - this.camera.y - 25 + Math.sin(Date.now()*0.01)*15);
-        this.ctx.lineTo(nue.x - this.camera.x - 15, nue.y - this.camera.y + 15);
-        this.ctx.fill();
-        this.ctx.beginPath();
-        this.ctx.moveTo(nue.x - this.camera.x, nue.y - this.camera.y);
-        this.ctx.lineTo(nue.x - this.camera.x + 40, nue.y - this.camera.y - 25 + Math.sin(Date.now()*0.01)*15);
-        this.ctx.lineTo(nue.x - this.camera.x + 15, nue.y - this.camera.y + 15);
-        this.ctx.fill();
-      });
-      
-      // Divine Dogs
-      this.domainManager.shikigami.dogs.forEach((dog, index) => {
-        this.ctx.fillStyle = index === 0 ? '#f8f8ff' : '#111111'; // White and Black Dog
-        const target = this.domainManager.ownerId === this.player.id ? this.abonant : this.player;
-        const dir = dog.state === 'dashing' ? (dog.targetX > dog.startX ? 1 : -1) : (dog.x > target.pos.x ? -1 : 1);
-        
-        // Body (longer)
-        this.ctx.fillRect(dog.x - 25 - this.camera.x, dog.y - 25 - this.camera.y, 50, 25);
-        
-        // Head
-        this.ctx.fillRect(dog.x + (dir * 20) - 15 - this.camera.x, dog.y - 40 - this.camera.y, 30, 25);
-        
-        // Snout
-        this.ctx.fillRect(dog.x + (dir * 35) - 10 - this.camera.x, dog.y - 30 - this.camera.y, 20, 15);
-        
-        // Ears
-        this.ctx.beginPath();
-        this.ctx.moveTo(dog.x + (dir * 10) - this.camera.x, dog.y - 40 - this.camera.y);
-        this.ctx.lineTo(dog.x + (dir * 5) - this.camera.x, dog.y - 55 - this.camera.y);
-        this.ctx.lineTo(dog.x + (dir * 20) - this.camera.x, dog.y - 40 - this.camera.y);
-        this.ctx.fill();
-
-        // Legs
-        this.ctx.fillRect(dog.x - 20 - this.camera.x, dog.y - this.camera.y, 10, 15); // Back leg
-        this.ctx.fillRect(dog.x + 10 - this.camera.x, dog.y - this.camera.y, 10, 15); // Front leg
-        
-        // Tail
-        this.ctx.beginPath();
-        this.ctx.moveTo(dog.x - (dir * 25) - this.camera.x, dog.y - 20 - this.camera.y);
-        this.ctx.lineTo(dog.x - (dir * 40) - this.camera.x, dog.y - 30 - this.camera.y);
-        this.ctx.lineTo(dog.x - (dir * 25) - this.camera.x, dog.y - 10 - this.camera.y);
-        this.ctx.fill();
-        
-        // Eye (red glow)
-        this.ctx.fillStyle = '#ff0000';
-        this.ctx.fillRect(dog.x + (dir * 25) - 2 - this.camera.x, dog.y - 35 - this.camera.y, 4, 4);
-      });
-      this.ctx.restore();
+    // Draw Mahoraga Entity (Summoned by Megumi)
+    if (this.mahoraga && this.mahoraga.active) {
+      this.mahoraga.draw(this.ctx, this.camera);
     }
 
     // Draw Megumi Tethers
@@ -1657,38 +1616,76 @@ export class GameEngine {
       if (this.domainManager.timer <= 2000 && this.domainManager.purpleVectors.length > 0) {
         const vec = this.domainManager.purpleVectors[0];
         const progress = 1 - (this.domainManager.timer / 2000);
-        const radius = 20 + 140 * progress;
-        
-        this.ctx.save();
-        this.ctx.shadowBlur = 30;
-        this.ctx.shadowColor = '#8a2be2';
+        const radius = 30 + 150 * progress;
         
         const x = vec.start.x - this.camera.x;
         const y = vec.start.y - this.camera.y;
+        const time = performance.now() / 150;
 
+        this.ctx.save();
+        
+        // Massive Outer Gravity Void Pulse
+        const outerPulse = radius * (1.2 + Math.sin(time * 2) * 0.08);
+        const outerGrad = this.ctx.createRadialGradient(x, y, radius * 0.2, x, y, outerPulse);
+        outerGrad.addColorStop(0, 'rgba(168, 85, 247, 0.4)');
+        outerGrad.addColorStop(0.5, 'rgba(126, 34, 206, 0.25)');
+        outerGrad.addColorStop(0.85, 'rgba(59, 7, 100, 0.15)');
+        outerGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        this.ctx.fillStyle = outerGrad;
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, outerPulse, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // High Intensity Energy Bloom
+        this.ctx.shadowBlur = 40;
+        this.ctx.shadowColor = '#c084fc';
         const grad = this.ctx.createRadialGradient(x, y, 0, x, y, radius);
         grad.addColorStop(0, '#ffffff');
-        grad.addColorStop(0.2, '#8a2be2');
-        grad.addColorStop(0.8, 'rgba(75, 0, 130, 0.8)');
-        grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-
+        grad.addColorStop(0.15, '#e879f9');
+        grad.addColorStop(0.4, '#a855f7');
+        grad.addColorStop(0.75, 'rgba(88, 28, 135, 0.85)');
+        grad.addColorStop(1, 'rgba(30, 0, 60, 0)');
         this.ctx.fillStyle = grad;
         this.ctx.beginPath();
         this.ctx.arc(x, y, radius, 0, Math.PI * 2);
         this.ctx.fill();
         
-        this.ctx.fillStyle = '#1a0033';
+        // Pure Absolute Singularity Core (Black Hole with White corona)
+        this.ctx.fillStyle = '#05010a';
         this.ctx.beginPath();
-        this.ctx.arc(x, y, radius * 0.4, 0, Math.PI * 2);
+        this.ctx.arc(x, y, radius * 0.35, 0, Math.PI * 2);
         this.ctx.fill();
 
-        this.ctx.strokeStyle = 'rgba(138, 43, 226, 0.8)';
-        this.ctx.lineWidth = 4;
-        const time = performance.now() / 200;
-        for (let j = 0; j < 3; j++) {
+        this.ctx.strokeStyle = '#ffffff';
+        this.ctx.lineWidth = 3;
+        this.ctx.stroke();
+
+        // 4 Multi-layered Hyper-fast Orbital Accretion Rings
+        for (let j = 0; j < 4; j++) {
           this.ctx.beginPath();
-          const angleOffset = (Math.PI * 2 / 3) * j + time;
-          this.ctx.arc(x, y, radius * 0.3, angleOffset, angleOffset + Math.PI);
+          const angleOffset = (Math.PI * 2 / 4) * j + (j % 2 === 0 ? time * 1.8 : -time * 1.4);
+          this.ctx.strokeStyle = j % 2 === 0 ? 'rgba(232, 121, 249, 0.9)' : 'rgba(56, 189, 248, 0.9)';
+          this.ctx.lineWidth = 3.5;
+          this.ctx.arc(x, y, radius * (0.45 + j * 0.15), angleOffset, angleOffset + Math.PI * 0.7);
+          this.ctx.stroke();
+        }
+
+        // Crackling Purple/Cyan Singularity Lightning Tendrils
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeStyle = '#f0abfc';
+        for (let l = 0; l < 5; l++) {
+          const lAngle = (Math.PI * 2 / 5) * l + time * 0.8;
+          const lDist = radius * (0.5 + ((l * 17) % 5) * 0.1);
+          const midDist = lDist * 0.6;
+          const mx = x + Math.cos(lAngle + 0.3) * midDist;
+          const my = y + Math.sin(lAngle + 0.3) * midDist;
+          const ex = x + Math.cos(lAngle) * lDist;
+          const ey = y + Math.sin(lAngle) * lDist;
+
+          this.ctx.beginPath();
+          this.ctx.moveTo(x, y);
+          this.ctx.lineTo(mx, my);
+          this.ctx.lineTo(ex, ey);
           this.ctx.stroke();
         }
         
@@ -1698,37 +1695,73 @@ export class GameEngine {
 
     for (const hp of this.activeHollowPurples) {
       this.ctx.save();
-      this.ctx.shadowBlur = 30;
-      this.ctx.shadowColor = '#8a2be2';
-      
       const x = hp.pos.x - this.camera.x;
       const y = hp.pos.y - this.camera.y;
       const radius = hp.radius;
+      const time = performance.now() / 120;
 
+      // 1. Huge Spatial Distortion Outer Glow
+      const pulseRadius = radius * (1.25 + Math.sin(time * 2.5) * 0.08);
+      const outerGrad = this.ctx.createRadialGradient(x, y, radius * 0.2, x, y, pulseRadius);
+      outerGrad.addColorStop(0, 'rgba(192, 132, 252, 0.45)');
+      outerGrad.addColorStop(0.45, 'rgba(126, 34, 206, 0.3)');
+      outerGrad.addColorStop(0.8, 'rgba(59, 7, 100, 0.15)');
+      outerGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      this.ctx.fillStyle = outerGrad;
+      this.ctx.beginPath();
+      this.ctx.arc(x, y, pulseRadius, 0, Math.PI * 2);
+      this.ctx.fill();
+
+      // 2. High-energy Vibrant Core Body
+      this.ctx.shadowBlur = 45;
+      this.ctx.shadowColor = '#c084fc';
       const grad = this.ctx.createRadialGradient(x, y, 0, x, y, radius);
       grad.addColorStop(0, '#ffffff');
-      grad.addColorStop(0.2, '#8a2be2');
-      grad.addColorStop(0.8, 'rgba(75, 0, 130, 0.8)');
-      grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      grad.addColorStop(0.18, '#f472b6');
+      grad.addColorStop(0.42, '#9333ea');
+      grad.addColorStop(0.78, 'rgba(76, 29, 149, 0.9)');
+      grad.addColorStop(1, 'rgba(20, 0, 45, 0)');
 
       this.ctx.fillStyle = grad;
       this.ctx.beginPath();
       this.ctx.arc(x, y, radius, 0, Math.PI * 2);
       this.ctx.fill();
       
-      this.ctx.fillStyle = '#1a0033'; // Dark purple instead of black
+      // 3. Absolute Void Singularity Core (Pitch Black Hole + Crisp Edge)
+      this.ctx.fillStyle = '#05000a';
       this.ctx.beginPath();
-      this.ctx.arc(x, y, radius * 0.4, 0, Math.PI * 2);
+      this.ctx.arc(x, y, radius * 0.38, 0, Math.PI * 2);
       this.ctx.fill();
-      
-      // Swirling effects inside
-      this.ctx.strokeStyle = 'rgba(138, 43, 226, 0.8)';
-      this.ctx.lineWidth = 4;
-      const time = performance.now() / 200;
-      for (let j = 0; j < 3; j++) {
+
+      this.ctx.strokeStyle = '#ffffff';
+      this.ctx.lineWidth = 3.5;
+      this.ctx.stroke();
+
+      // 4. Violent Swirling Accretion Arcs (Dual Red + Blue merged into Purple)
+      for (let j = 0; j < 5; j++) {
         this.ctx.beginPath();
-        const angleOffset = (Math.PI * 2 / 3) * j + time;
-        this.ctx.arc(x, y, radius * 0.3, angleOffset, angleOffset + Math.PI);
+        const angleOffset = (Math.PI * 2 / 5) * j + (j % 2 === 0 ? time * 2.2 : -time * 1.8);
+        this.ctx.strokeStyle = j % 2 === 0 ? 'rgba(244, 114, 182, 0.95)' : 'rgba(56, 189, 248, 0.95)';
+        this.ctx.lineWidth = 4;
+        this.ctx.arc(x, y, radius * (0.48 + (j % 3) * 0.18), angleOffset, angleOffset + Math.PI * 0.65);
+        this.ctx.stroke();
+      }
+
+      // 5. Singularity Lightning Arcs
+      this.ctx.lineWidth = 2.5;
+      this.ctx.strokeStyle = '#ffffff';
+      for (let l = 0; l < 6; l++) {
+        const lAngle = (Math.PI * 2 / 6) * l + time * 1.1;
+        const lDist = radius * (0.55 + ((l * 13) % 4) * 0.12);
+        const mx = x + Math.cos(lAngle + 0.25) * (lDist * 0.6);
+        const my = y + Math.sin(lAngle + 0.25) * (lDist * 0.6);
+        const ex = x + Math.cos(lAngle) * lDist;
+        const ey = y + Math.sin(lAngle) * lDist;
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, y);
+        this.ctx.lineTo(mx, my);
+        this.ctx.lineTo(ex, ey);
         this.ctx.stroke();
       }
       

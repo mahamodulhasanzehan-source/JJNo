@@ -24,13 +24,6 @@ export class DomainManager {
   sukunaOmniCleaveCount: number = 0;
   impactFrameTimer: number = 0;
   
-  // Megumi specific
-  shikigami: {
-    nue: { x: number, y: number, timer: number }[],
-    dogs: { x: number, y: number, state: string, cooldown: number, dashTimer: number, startX: number, targetX: number }[],
-    elephantTimer: number
-  } | null = null;
-
   // Hakari specific
   hakariState: 'rolling' | 'jackpot' | null = null;
   hakariRollTimer: number = 0;
@@ -58,19 +51,8 @@ export class DomainManager {
       this.timer = 30000;
       this.maxTimer = 30000;
     } else if (type === 'Megumi') {
-      this.timer = 10000; // 10s duration
-      this.maxTimer = 10000;
-      this.shikigami = {
-        nue: [
-          { x: 0, y: 0, timer: 0 },
-          { x: 0, y: 0, timer: 0 }
-        ],
-        dogs: [
-          { x: 0, y: 0, state: 'idle', cooldown: 0, dashTimer: 0, startX: 0, targetX: 0 },
-          { x: 0, y: 0, state: 'idle', cooldown: 0, dashTimer: 0, startX: 0, targetX: 0 }
-        ],
-        elephantTimer: 4000
-      };
+      this.timer = 8000;
+      this.maxTimer = 8000;
     } else if (type === 'Hakari') {
       this.hakariState = 'rolling';
       this.hakariRollTimer = 3000; // 3 seconds roll
@@ -254,73 +236,7 @@ export class DomainManager {
         ctx.fill();
       }
     } else if (this.type === 'Megumi') {
-      // Chimera Shadow Garden - Abyssal black sludge
-      ctx.fillStyle = '#050a14'; // Deep dark greenish-black
-      ctx.fillRect(0, 0, width, height);
-
-      // Deep shadow layers rising and falling
-      const t = Date.now() * 0.001;
-      
-      const shadowGrad = ctx.createLinearGradient(0, height*0.3, 0, height);
-      shadowGrad.addColorStop(0, 'rgba(0,0,0,0)');
-      shadowGrad.addColorStop(0.5, 'rgba(5, 20, 30, 0.8)');
-      shadowGrad.addColorStop(1, '#000000');
-      ctx.fillStyle = shadowGrad;
-      ctx.fillRect(0, 0, width, height);
-
-      // Giant floating shadow animal silhouettes in the background
-      ctx.fillStyle = 'rgba(0, 20, 40, 0.3)';
-      for(let i=0; i<4; i++) {
-        const ax = (width * 0.3 * i + t * 20) % (width + 400) - 200;
-        const ay = height*0.4 + Math.sin(t+i)*50;
-        ctx.beginPath();
-        ctx.ellipse(ax, ay, 150 + i*20, 80 + i*10, Math.sin(t*0.5+i)*0.2, 0, Math.PI*2);
-        ctx.fill();
-        // Glowing cyan eyes
-        ctx.fillStyle = 'rgba(0, 255, 200, 0.6)';
-        ctx.beginPath(); ctx.arc(ax - 50, ay - 20, 8, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(ax + 50, ay - 20, 8, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = 'rgba(0, 20, 40, 0.3)';
-      }
-
-      // Signature bone/spine structure rising from the shadows
-      ctx.strokeStyle = 'rgba(180, 200, 255, 0.2)'; 
-      ctx.fillStyle = 'rgba(180, 200, 255, 0.1)';
-      ctx.lineWidth = 4;
-      
-      const spineX = width / 2 - (camera.x * 0.05); // Parallax
-      
-      // Draw massive spinal column
-      for (let y = height; y > 100; y -= 60) {
-        const offset = Math.sin(y * 0.02 + t) * 30;
-        
-        ctx.beginPath();
-        // Vertebrae core
-        ctx.arc(spineX + offset, y, 20, 0, Math.PI*2);
-        ctx.fill();
-        ctx.stroke();
-        
-        // Ribs extending outwards
-        ctx.beginPath();
-        ctx.moveTo(spineX + offset - 20, y);
-        ctx.quadraticCurveTo(spineX + offset - 150, y - 50, spineX + offset - 200, y + 50);
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(spineX + offset + 20, y);
-        ctx.quadraticCurveTo(spineX + offset + 150, y - 50, spineX + offset + 200, y + 50);
-        ctx.stroke();
-      }
-
-      // Liquid black sludge floor with waves
-      ctx.fillStyle = '#02050a';
-      ctx.beginPath();
-      ctx.moveTo(0, height);
-      for(let x=0; x<=width; x+=50) {
-        ctx.lineTo(x, height - 120 + Math.sin(x*0.01 + t*2)*20 + Math.cos(x*0.02 - t*1.5)*15);
-      }
-      ctx.lineTo(width, height);
-      ctx.fill();
+      drawMegumiDomainBackground(ctx, width, height, camera);
     } else if (this.type === 'Hakari') {
       drawHakariDomainBackground(
         ctx, width, height, camera,
