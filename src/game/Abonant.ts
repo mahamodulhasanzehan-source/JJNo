@@ -61,6 +61,7 @@ export class Abonant extends Entity {
     const activeType = this.mimicryTarget || this.characterType;
     if (activeType === 'Gojo') return 75;
     if (activeType === 'Megumi') return 90;
+    if (activeType === 'Yuji') return 80;
     return C_COST; // 70
   }
 

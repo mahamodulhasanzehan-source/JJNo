@@ -481,7 +481,7 @@ export class GameEngine {
     this.lastMouseDown = this.input.mouse.isDown;
 
     // Domain Expansion Input (Player)
-    const playerDomainCost = this.player.characterType === 'Gojo' ? 75 : (this.player.characterType === 'Megumi' ? 90 : C_COST);
+    const playerDomainCost = this.player.characterType === 'Gojo' ? 75 : (this.player.characterType === 'Megumi' ? 90 : (this.player.characterType === 'Yuji' ? 80 : C_COST));
     const canPlayerActivateDomain = (!this.domainManager.active || this.domainManager.type !== 'Yuji') && 
       !(this.player.characterType === 'Hakari' && this.player.infiniteCeTimer > 0) &&
       !(this.player.characterType === 'Megumi' && this.player.hasSpawnedMahoraga);
@@ -507,7 +507,7 @@ export class GameEngine {
     }
 
     // Domain Expansion (Abonant)
-    const abonantDomainCost = this.abonant.characterType === 'Gojo' ? 75 : (this.abonant.characterType === 'Megumi' ? 90 : C_COST);
+    const abonantDomainCost = this.abonant.characterType === 'Gojo' ? 75 : (this.abonant.characterType === 'Megumi' ? 90 : (this.abonant.characterType === 'Yuji' ? 80 : C_COST));
     const canAbonantActivateDomain = (!this.domainManager.active || this.domainManager.type !== 'Yuji') && 
       !(this.abonant.characterType === 'Hakari' && this.abonant.infiniteCeTimer > 0) &&
       !(this.abonant.characterType === 'Megumi' && this.abonant.hasSpawnedMahoraga);
@@ -1186,7 +1186,7 @@ export class GameEngine {
 
     // Melee Collision (Q Dash)
     if (this.player.phaseTimer > 0 && !this.player.hasHitDash && this.checkCollision(this.player.getRect(), this.abonant.getRect())) {
-      let damage = (isDomainActive && this.domainManager.type === 'Yuji') ? Q_DMG * 1.5 : Q_DMG;
+      let damage = (isDomainActive && this.domainManager.type === 'Yuji' && (this.player.characterType === 'Yuji' || this.player.mimicryTarget === 'Yuji')) ? Q_DMG * 0.8 : Q_DMG;
       if (this.player.characterType === 'Megumi') damage -= 3;
       
       let isBlackFlash = false;
@@ -1220,7 +1220,7 @@ export class GameEngine {
       }
     }
     if (this.abonant.phaseTimer > 0 && !this.abonant.hasHitDash && this.checkCollision(this.abonant.getRect(), this.player.getRect())) {
-      let damage = Q_DMG;
+      let damage = (isDomainActive && this.domainManager.type === 'Yuji' && (this.abonant.characterType === 'Yuji' || this.abonant.mimicryTarget === 'Yuji')) ? Q_DMG * 0.8 : Q_DMG;
       if (this.abonant.characterType === 'Megumi') damage -= 3;
       
       let isBlackFlash = false;
