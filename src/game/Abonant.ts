@@ -36,25 +36,39 @@ export class Abonant extends Entity {
   punishTimer: number = 0;
   crossUpDirection: number = 1;
 
-  constructor(id: string, x: number, y: number, input?: InputManager) {
+  constructor(id: string, x: number, y: number, input?: InputManager, initialType?: CharacterType) {
     const types: CharacterType[] = ['Gojo', 'Sukuna', 'Yuji', 'Megumi', 'Hakari'];
-    const randomType = types[Math.floor(Math.random() * types.length)];
-    const colors = {
+    const chosenType = initialType || types[Math.floor(Math.random() * types.length)];
+    const colors: Record<CharacterType, string> = {
       'Gojo': '#8a2be2',
       'Sukuna': '#e74c3c',
       'Yuji': '#ff6b6b',
       'Megumi': '#00008b',
       'Hakari': '#ffd700'
     };
-    super(id, x, y, randomType, colors[randomType]);
+    super(id, x, y, chosenType, colors[chosenType]);
     this.input = input;
 
+    this.setCharacterType(chosenType);
+  }
+
+  setCharacterType(type: CharacterType) {
+    this.characterType = type;
+    const colors: Record<CharacterType, string> = {
+      'Gojo': '#8a2be2',
+      'Sukuna': '#e74c3c',
+      'Yuji': '#ff6b6b',
+      'Megumi': '#00008b',
+      'Hakari': '#ffd700'
+    };
+    this.color = colors[type] || '#ffffff';
+
     // Archetype-specific preferred spacing
-    if (randomType === 'Yuji') this.spacingTargetDist = 140;
-    else if (randomType === 'Sukuna') this.spacingTargetDist = 240;
-    else if (randomType === 'Gojo') this.spacingTargetDist = 220;
-    else if (randomType === 'Megumi') this.spacingTargetDist = 260;
-    else if (randomType === 'Hakari') this.spacingTargetDist = 160;
+    if (type === 'Yuji') this.spacingTargetDist = 140;
+    else if (type === 'Sukuna') this.spacingTargetDist = 240;
+    else if (type === 'Gojo') this.spacingTargetDist = 220;
+    else if (type === 'Megumi') this.spacingTargetDist = 260;
+    else if (type === 'Hakari') this.spacingTargetDist = 160;
   }
 
   getDomainCost(): number {

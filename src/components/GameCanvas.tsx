@@ -34,9 +34,14 @@ export default function GameCanvas({ character, opponentCharacter, networkMatch 
     canvas.height = window.innerHeight;
     
     const newEngine = new GameEngine(canvas, networkMatch ? 'multi' : 'single', networkMatch ? (networkMatch.role === 'client' ? 'guest' : 'host') : undefined);
-    newEngine.player.characterType = character;
+    newEngine.player.setCharacterType(character);
+    
     if (opponentCharacter) {
-      newEngine.abonant.characterType = opponentCharacter;
+      newEngine.abonant.setCharacterType(opponentCharacter);
+    } else {
+      const allTypes: CharacterType[] = ['Yuji', 'Gojo', 'Sukuna', 'Megumi', 'Hakari'];
+      const fairRandom = allTypes[Math.floor(Math.random() * allTypes.length)];
+      newEngine.abonant.setCharacterType(fairRandom);
     }
     
     if (networkMatch) {
@@ -59,7 +64,7 @@ export default function GameCanvas({ character, opponentCharacter, networkMatch 
           newEngine.opponentInput.mouse = data.input.mouse;
         } else if (data.type === 'sync') {
           if (newEngine.abonant.characterType !== data.characterType) {
-            newEngine.abonant.characterType = data.characterType;
+            newEngine.abonant.setCharacterType(data.characterType);
           }
         }
       };
@@ -122,7 +127,7 @@ export default function GameCanvas({ character, opponentCharacter, networkMatch 
         networkMatch.pc.close();
       }
     };
-  }, [character, networkMatch]);
+  }, [character, opponentCharacter, networkMatch]);
 
   return (
     <div className="relative w-full h-screen overflow-hidden bg-black text-white font-sans">

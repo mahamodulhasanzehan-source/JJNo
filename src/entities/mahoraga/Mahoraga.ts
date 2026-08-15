@@ -45,9 +45,9 @@ export class Mahoraga {
   width: number = 140;
   height: number = 320;
 
-  // 1.5x Health: 750 HP
-  hp: number = 750;
-  maxHp: number = 750;
+  // 0.5x Health: 375 HP
+  hp: number = 375;
+  maxHp: number = 375;
   facingRight: boolean = true;
   isGrounded: boolean = false;
   

@@ -5,7 +5,7 @@ import { E_COST, Q_COST, C_COST, Q_DMG } from './Constants';
 import { Particle } from './Particle';
 import { soundManager } from './SoundManager';
 import { handlePlayerMovement } from '../systems/movement';
-import { Vector2 } from './Types';
+import { Vector2, CharacterType } from './Types';
 import { fireSukunaE } from '../entities/sukuna/sukuna_E';
 import { fireSukunaQDomain } from '../entities/sukuna/sukuna_Q';
 import { fireYujiDomainE } from '../entities/yuji/yuji_E';
@@ -14,8 +14,20 @@ export class Player extends Entity {
   input: InputManager;
 
   constructor(id: string, x: number, y: number, input: InputManager) {
-    super(id, x, y, 'Yuji', '#4a90e2'); // Default to Yuji for player
+    super(id, x, y, 'Yuji', '#ff6b6b');
     this.input = input;
+  }
+
+  setCharacterType(type: CharacterType) {
+    this.characterType = type;
+    const colors: Record<CharacterType, string> = {
+      'Yuji': '#ff6b6b',
+      'Gojo': '#8a2be2',
+      'Sukuna': '#e74c3c',
+      'Megumi': '#00008b',
+      'Hakari': '#ffd700'
+    };
+    this.color = colors[type] || '#ffffff';
   }
 
   update(
